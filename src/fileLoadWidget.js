@@ -80,7 +80,7 @@ class FileLoadWidget {
         this.error_message.appendChild(DomUtils.div({ class: 'igv-flw-error-message'}));
 
         // error dismiss button
-        attachCloseHandler(this.error_message, () => {
+        igv.attachDialogCloseHandlerWithParent(this.error_message, () => {
             this.dismissErrorMessage();
         });
 
@@ -237,20 +237,5 @@ class FileLoadWidget {
     }
 
 }
-
-const attachCloseHandler = (parent, closeHandler) => {
-
-    const container = DomUtils.div();
-    parent.appendChild(container);
-
-    container.innerHTML = igv.iconMarkup('times');
-
-    container.addEventListener('click', e => {
-        e.preventDefault();
-        e.stopPropagation();
-        closeHandler()
-    });
-
-};
 
 export default FileLoadWidget;
