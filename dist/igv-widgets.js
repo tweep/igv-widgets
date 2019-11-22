@@ -43464,7 +43464,7 @@ class FileLoadWidget {
         this.error_message.appendChild(domUtils.div({ class: 'igv-flw-error-message'}));
 
         // error dismiss button
-        attachCloseHandler(this.error_message, () => {
+        api.attachDialogCloseHandlerWithParent(this.error_message, () => {
             this.dismissErrorMessage();
         });
 
@@ -43621,21 +43621,6 @@ class FileLoadWidget {
     }
 
 }
-
-const attachCloseHandler = (parent, closeHandler) => {
-
-    const container = domUtils.div();
-    parent.appendChild(container);
-
-    container.innerHTML = api.iconMarkup('times');
-
-    container.addEventListener('click', e => {
-        e.preventDefault();
-        e.stopPropagation();
-        closeHandler();
-    });
-
-};
 
 /*
  *  The MIT License (MIT)
