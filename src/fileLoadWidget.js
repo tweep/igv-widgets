@@ -24,8 +24,10 @@
  * THE SOFTWARE.
  */
 
-import igv from '../node_modules/igv/dist/igv.esm.js';
-import { DomUtils } from '../node_modules/igv-ui/dist/igv-ui.js';
+import { DomUtils, UIUtils } from '../node_modules/igv-ui/dist/igv-ui.js';
+
+// TODO: igvjs dependencies
+import {guid} from "./igvjs/util/domUtils.js";
 
 class FileLoadWidget {
 
@@ -80,7 +82,7 @@ class FileLoadWidget {
         this.error_message.appendChild(DomUtils.div({ class: 'igv-flw-error-message'}));
 
         // error dismiss button
-        igv.attachDialogCloseHandlerWithParent(this.error_message, () => {
+        UIUtils.attachDialogCloseHandlerWithParent(this.error_message, () => {
             this.dismissErrorMessage();
         });
 
@@ -202,7 +204,7 @@ class FileLoadWidget {
         const file_chooser_container = DomUtils.div({ class: 'igv-flw-file-chooser-container'});
         parent.appendChild(file_chooser_container);
 
-        const str = `${ id }${ igv.guid() }`;
+        const str = `${ id }${ guid() }`;
 
         const label = DomUtils.create('label');
         label.setAttribute('for', str);
