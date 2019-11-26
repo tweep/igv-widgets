@@ -1,13 +1,13 @@
-import AlertDialog from "./alertDialog.js"
+import { AlertDialog } from '../../../node_modules/igv-ui/dist/igv-ui.js';
 
 // The global Alert dialog
 
 let alertDialog
 
 const Alert = {
-    init($root) {
+    init(root) {
         if (!alertDialog) {
-            alertDialog = new AlertDialog($root);
+            alertDialog = new AlertDialog(root);
         }
     },
 
