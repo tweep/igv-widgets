@@ -21,14 +21,14 @@
  *
  */
 
-import { getExtension, getFilename, validIndexExtensionSet, isKnownFileExtension, isValidIndexExtension, getIndexObjectWithDataName } from './utils.js';
+import { validIndexExtensionSet, isKnownFileExtension, isValidIndexExtension, getIndexObjectWithDataName } from './utils.js';
 
 // TODO: igvjs dependencies
-import {isFilePath} from "./igvjs/util/fileUtils.js";
+import { isFilePath, getExtension, getFilename } from "./igvjs/util/fileUtils.js";
 import google from "./igvjs/google/googleUtils.js";
 import igvxhr from "./igvjs/igvxhr.js";
 import Alert from "./igvjs/ui/alert.js";
-import {inferFileFormat, inferTrackTypes} from "./igvjs/util/trackUtils.js";
+import { knownFileExtensions, inferFileFormat, inferTrackTypes } from "./igvjs/util/trackUtils.js";
 
 const indexableFormats = new Set(["vcf", "bed", "gff", "gtf", "gff3", "bedgraph"]);
 
