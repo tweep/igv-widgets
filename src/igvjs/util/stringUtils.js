@@ -22,6 +22,7 @@ function numberFormatter(rawNumber) {
     }).split('').reverse().join('') + (dec[1] ? decsep + dec[1] : '');
 }
 
+const numberUnFormatter = formatedNumber => formatedNumber.split(",").join().replace(",", "", "g");
 
 const splitLines = function (string) {
     return string.split(/\n|\r\n|\r/g);
@@ -100,4 +101,4 @@ function uncompressString(enc) {
     return str;
 }
 
-export {isString, numberFormatter, splitLines, splitStringRespectingQuotes, hashCode, compressString, uncompressString};
+export {isString, numberFormatter, numberUnFormatter, splitLines, splitStringRespectingQuotes, hashCode, compressString, uncompressString};

@@ -32542,6 +32542,7 @@ function numberFormatter(rawNumber) {
     }).split('').reverse().join('') + (dec[1] ? decsep + dec[1] : '');
 }
 
+const numberUnFormatter = formatedNumber => formatedNumber.split(",").join().replace(",", "", "g");
 
 const splitLines = function (string) {
     return string.split(/\n|\r\n|\r/g);
@@ -32624,6 +32625,7 @@ var stringUtils = /*#__PURE__*/Object.freeze({
     __proto__: null,
     isString: isString,
     numberFormatter: numberFormatter,
+    numberUnFormatter: numberUnFormatter,
     splitLines: splitLines,
     splitStringRespectingQuotes: splitStringRespectingQuotes,
     hashCode: hashCode,
