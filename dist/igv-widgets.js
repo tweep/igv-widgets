@@ -22651,4 +22651,4 @@ var widgetUtils = /*#__PURE__*/Object.freeze({
     translateMouseCoordinates: translateMouseCoordinates
 });
 
-export { Alert, FileLoadManager, FileLoadWidget, fileUtils as FileUtils, GenericContainer, appGoogle as GoogleWidgets, IGVColor, igvIcons as IGVIcons, IGVMath, MultipleFileLoadController, stringUtils as StringUtils, TrackLoadController, trackUtils as TrackUtils, urlShortener as URLShortener, utils as Utils, widgetUtils as WidgetUtils, igvxhr, makeDraggable, oauth, trackLoadControllerConfigurator };
+export { Alert, FileLoadManager, FileLoadWidget, fileUtils as FileUtils, GenericContainer, appGoogle as GoogleWidgets, IGVColor, igvIcons as IGVIcons, IGVMath, MultipleFileLoadController, stringUtils as StringUtils, TrackLoadController, trackUtils as TrackUtils, urlShortener as URLShortener, utils as Utils, widgetUtils as WidgetUtils, google$1 as google, igvxhr, makeDraggable, oauth, trackLoadControllerConfigurator };
