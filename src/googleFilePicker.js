@@ -22,12 +22,14 @@
  */
 
 // TODO: igvjs dependencies
-import oauth from "./igvjs/oauth.js";
-import Alert from "./igvjs/ui/alert.js";
+import {Alert} from "../node_modules/igv-ui/src/index.js";
 
 let picker;
+let oauth;
 
-function init(clientId) {
+function init(clientId, oa) {
+
+    oauth = oa;
 
     let scope,
         config;

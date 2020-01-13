@@ -1,12 +1,11 @@
 {
   "name": "igv-widgets",
   "version": "1.0.0",
-  "description": "Various UI modules to support igvjs",
+  "description": "Various UI modules to support igvteam web apps",
   "browser": "dist/igv-widgets.js",
   "module": "dist/igv-widgets.js",
   "files": [
-    "dist/**",
-    "src/**"
+    "dist/**"
   ],
   "scripts": {
     "build": "npx rollup --config",
@@ -26,11 +25,12 @@
     "url": "https://github.com/igvteam/igv-widgets/issues"
   },
   "homepage": "https://github.com/igvteam/igv-widgets#readme",
-  "devDependencies": {
-    "data-modal": "igvteam/data-modal",
-    "igv-ui": "igvteam/igv-ui"
-  },
   "dependencies": {
+    "data-modal": "github:igvteam/data-modal",
+    "igv-ui": "github:igvteam/igv-ui",
+    "igv-utils": "github:igvteam/igv-utils"
+  },
+  "devDependencies": {
     "rollup": "^1.27.8"
   }
 }

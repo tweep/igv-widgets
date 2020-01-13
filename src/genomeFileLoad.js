@@ -1,7 +1,7 @@
 import FileLoad from "./fileLoad.js";
-import Alert from "./igvjs/ui/alert.js";
-import igvxhr from "./igvjs/igvxhr.js";
-import * as FileUtils from './igvjs/util/fileUtils.js';
+import {Alert} from "../node_modules/igv-ui/src/index.js"
+//import igvxhr from "./igvjs/igvxhr.js";
+import {FileUtils} from "../node_modules/igv-utils/src/index.js"
 
 const referenceSet = new Set(['fai', 'fa', 'fasta']);
 const dataSet = new Set(['fa', 'fasta']);
@@ -10,8 +10,9 @@ const indexSet = new Set(['fai']);
 const errorString = 'ERROR: Load either: 1) single XML file 2). single JSON file. 3) data file (.fa or .fasta ) & index file (.fai).';
 class GenomeFileLoad extends FileLoad {
 
-    constructor({ localFileInput, dropboxButton, googleEnabled, googleDriveButton, loadHandler }) {
-        super({ localFileInput, dropboxButton, googleEnabled, googleDriveButton });
+    constructor({ localFileInput, dropboxButton, googleEnabled, googleDriveButton, loadHandler, igvxhr, google }) {
+        super(
+            { localFileInput, dropboxButton, googleEnabled, googleDriveButton, igvxhr, google });
         this.loadHandler = loadHandler;
     }
 
@@ -23,7 +24,7 @@ class GenomeFileLoad extends FileLoad {
 
             const path = list[ 0 ];
             if ('json' === FileUtils.getExtension(path)) {
-                const json = await igvxhr.loadJson((path.google_url || path));
+                const json = await this.igvxhr.loadJson((path.google_url || path));
                 this.loadHandler(json);
             } else if ('xml' === FileUtils.getExtension(path)) {
 

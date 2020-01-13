@@ -24,7 +24,7 @@
  * THE SOFTWARE.
  */
 
-import { DomUtils, UIUtils } from '../node_modules/igv-ui/dist/igv-ui.js';
+import { DOMUtils, UIUtils } from '../node_modules/igv-ui/src/index.js';
 
 class FileLoadWidget {
 
@@ -42,7 +42,7 @@ class FileLoadWidget {
         doURL = doURL || false;
 
         // file load widget
-        this.container = DomUtils.div({ class: 'igv-file-load-widget-container'});
+        this.container = DOMUtils.div({ class: 'igv-file-load-widget-container'});
         widgetParent.appendChild(this.container);
 
         let config;
@@ -72,11 +72,11 @@ class FileLoadWidget {
         this.createInputContainer(config);
 
         // error message container
-        this.error_message = DomUtils.div({ class: 'igv-flw-error-message-container'});
+        this.error_message = DOMUtils.div({ class: 'igv-flw-error-message-container'});
         this.container.appendChild(this.error_message);
 
         // error message
-        this.error_message.appendChild(DomUtils.div({ class: 'igv-flw-error-message'}));
+        this.error_message.appendChild(DOMUtils.div({ class: 'igv-flw-error-message'}));
 
         // error dismiss button
         UIUtils.attachDialogCloseHandlerWithParent(this.error_message, () => {
@@ -116,16 +116,16 @@ class FileLoadWidget {
 
     presentErrorMessage(message) {
         this.error_message.querySelector('.igv-flw-error-message').textContent = message;
-        DomUtils.show(this.error_message);
+        DOMUtils.show(this.error_message);
     }
 
     dismissErrorMessage() {
-        DomUtils.hide(this.error_message);
+        DOMUtils.hide(this.error_message);
         this.error_message.querySelector('.igv-flw-error-message').textContent = '';
     }
 
     present() {
-        DomUtils.show(this.container);
+        DOMUtils.show(this.container);
     }
 
     dismiss() {
@@ -134,7 +134,7 @@ class FileLoadWidget {
 
         const e = this.container.querySelector('.igv-flw-local-file-name-container');
         if (e) {
-            DomUtils.hide(e);
+            DOMUtils.hide(e);
         }
 
         // clear input elements
@@ -149,17 +149,17 @@ class FileLoadWidget {
     createInputContainer({ parent, doURL, dataTitle, indexTitle, dataOnly }) {
 
         // container
-        const container = DomUtils.div({ class: 'igv-flw-input-container' });
+        const container = DOMUtils.div({ class: 'igv-flw-input-container' });
         parent.appendChild(container);
 
         // data
-        const input_data_row = DomUtils.div({ class: 'igv-flw-input-row' });
+        const input_data_row = DOMUtils.div({ class: 'igv-flw-input-row' });
         container.appendChild(input_data_row);
 
         let label;
 
         // label
-        label = DomUtils.div({ class: 'igv-flw-input-label' });
+        label = DOMUtils.div({ class: 'igv-flw-input-label' });
         input_data_row.appendChild(label);
         label.textContent = dataTitle;
 
@@ -174,11 +174,11 @@ class FileLoadWidget {
         }
 
         // index
-        const input_index_row = DomUtils.div({ class: 'igv-flw-input-row' });
+        const input_index_row = DOMUtils.div({ class: 'igv-flw-input-row' });
         container.appendChild(input_index_row);
 
         // label
-        label = DomUtils.div({ class: 'igv-flw-input-label' });
+        label = DOMUtils.div({ class: 'igv-flw-input-label' });
         input_index_row.appendChild(label);
         label.textContent = indexTitle;
 
@@ -192,7 +192,7 @@ class FileLoadWidget {
 
     createURLContainer(parent, id, isIndexFile) {
 
-        const input = DomUtils.create('input');
+        const input = DOMUtils.create('input');
         input.setAttribute('type', 'text');
         input.setAttribute('placeholder', (true === isIndexFile ? 'Enter index URL' : 'Enter data URL'));
         parent.appendChild(input);
@@ -207,27 +207,27 @@ class FileLoadWidget {
 
     createLocalFileContainer(parent, id, isIndexFile) {
 
-        const file_chooser_container = DomUtils.div({ class: 'igv-flw-file-chooser-container'});
+        const file_chooser_container = DOMUtils.div({ class: 'igv-flw-file-chooser-container'});
         parent.appendChild(file_chooser_container);
 
-        const str = `${ id }${ DomUtils.guid() }`;
+        const str = `${ id }${ DOMUtils.guid() }`;
 
-        const label = DomUtils.create('label');
+        const label = DOMUtils.create('label');
         label.setAttribute('for', str);
 
         file_chooser_container.appendChild(label);
         label.textContent = 'Choose file';
 
-        const input = DomUtils.create('input', { class: 'igv-flw-file-chooser-input'});
+        const input = DOMUtils.create('input', { class: 'igv-flw-file-chooser-input'});
         input.setAttribute('id', str);
         input.setAttribute('name', str);
         input.setAttribute('type', 'file');
         file_chooser_container.appendChild(input);
 
-        const file_name = DomUtils.div({ class: 'igv-flw-local-file-name-container' });
+        const file_name = DOMUtils.div({ class: 'igv-flw-local-file-name-container' });
         parent.appendChild(file_name);
 
-        DomUtils.hide(file_name);
+        DOMUtils.hide(file_name);
 
         input.addEventListener('change', e => {
 
@@ -239,7 +239,7 @@ class FileLoadWidget {
             const { name } = file;
             file_name.textContent = name;
             file_name.setAttribute('title', name);
-            DomUtils.show(file_name);
+            DOMUtils.show(file_name);
         });
 
     }

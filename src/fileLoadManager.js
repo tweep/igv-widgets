@@ -25,7 +25,7 @@
  */
 
 // TODO: igvjs dependencies
-import {isFilePath} from "./igvjs/util/fileUtils.js";
+import {FileUtils} from "../node_modules/igv-utils/src/index.js"
 
 class FileLoadManager {
 
@@ -82,7 +82,7 @@ class FileLoadManager {
 }
 
 function itemName (item) {
-    return isFilePath(item) ? item.name : item;
+    return FileUtils.isFilePath(item) ? item.name : item;
 }
 
 export default FileLoadManager;

@@ -21,15 +21,14 @@
  *
  */
 
-import {knownFileExtensions} from "./igvjs/util/trackUtils.js";
-import {getExtension} from "./igvjs/util/fileUtils.js";
+import {FileUtils} from "../node_modules/igv-utils/src/index.js"
 
 let validIndexExtensionSet = new Set(['fai', 'bai', 'crai', 'tbi', 'idx']);
 
 let isValidIndexExtension = (path) => {
     // let set;
     // set = new Set(['fai', 'bai', 'crai', 'tbi', 'idx']);
-    return validIndexExtensionSet.has(getExtension(path));
+    return validIndexExtensionSet.has(FileUtils.getExtension(path));
 };
 
 let getIndexObjectWithDataName = (name) => {
@@ -39,7 +38,7 @@ let getIndexObjectWithDataName = (name) => {
         indexObject,
         aa;
 
-    extension = getExtension(name);
+    extension = FileUtils.getExtension(name);
 
     if (false === isKnownFileExtension(extension)) {
         return undefined;
@@ -78,7 +77,7 @@ let getIndexObjectWithDataName = (name) => {
 
 let isKnownFileExtension = (extension) => {
     let fasta = new Set(['fa', 'fasta']);
-    let union = new Set([...(knownFileExtensions), ...fasta]);
+    let union = new Set([...(TrackUtils.knownFileExtensions), ...fasta]);
     return union.has(extension);
 };
 

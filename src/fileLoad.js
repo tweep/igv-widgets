@@ -1,11 +1,15 @@
 import * as Utils from './utils.js';
-import * as FileUtils from './igvjs/util/fileUtils.js';
-import GoogleUtils from "./igvjs/google/googleUtils.js";
+import {FileUtils} from "../node_modules/igv-utils/src/index.js"
+//import GoogleUtils from "./igvjs/google/googleUtils.js";
 import * as GoogleFilePicker from './googleFilePicker.js';
+import { DOMUtils } from '../node_modules/igv-ui/src/index.js'
 
-import { DomUtils } from '../node_modules/igv-ui/dist/igv-ui.js';
 class FileLoad {
-    constructor({ localFileInput, dropboxButton, googleEnabled, googleDriveButton }) {
+
+    constructor({ localFileInput, dropboxButton, googleEnabled, googleDriveButton, igvxhr, google }) {
+
+        this.igvxhr = igvxhr;
+        this.google = google;
 
         localFileInput.addEventListener('change', async () => {
 
@@ -33,7 +37,7 @@ class FileLoad {
 
 
         if (false === googleEnabled) {
-            DomUtils.hide(googleDriveButton.parentElement);
+            DOMUtils.hide(googleDriveButton.parentElement);
         }
 
         if (true === googleEnabled && googleDriveButton) {
@@ -69,7 +73,7 @@ class FileLoad {
             if (FileUtils.isFilePath(path)) {
                 tmp.push(path);
             } else if (undefined === path.google_url && path.includes('drive.google.com')) {
-                const fileInfo = await GoogleUtils.getDriveFileInfo(path);
+                const fileInfo = await google.getDriveFileInfo(path);
                 googleDrivePaths.push({ filename: fileInfo.name, name: fileInfo.name, google_url: path});
             } else {
                 tmp.push(path);

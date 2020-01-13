@@ -1,15 +1,14 @@
 import FileLoad from "./fileLoad.js";
-import Alert from "./igvjs/ui/alert.js";
-import igvxhr from "./igvjs/igvxhr.js";
-import * as FileUtils from './igvjs/util/fileUtils.js';
+import {Alert} from "../node_modules/igv-ui/src/index.js"
+//import igvxhr from "./igvjs/igvxhr.js";
+import {FileUtils, TrackUtils} from "../node_modules/igv-utils/src/index.js"
 import * as Utils from './utils.js';
-import * as TrackUtils from './igvjs/util/trackUtils.js';
 
 const indexableFormats = new Set(["vcf", "bed", "gff", "gtf", "gff3", "bedgraph"]);
 
 class TrackFileLoad extends FileLoad {
-    constructor({ localFileInput, dropboxButton, googleEnabled, googleDriveButton, loadHandler }) {
-        super({ localFileInput, dropboxButton, googleEnabled, googleDriveButton });
+    constructor({ localFileInput, dropboxButton, googleEnabled, googleDriveButton, loadHandler, igvxhr, google }) {
+        super({ localFileInput, dropboxButton, googleEnabled, googleDriveButton, google });
         this.loadHandler = loadHandler;
     }
 
@@ -25,7 +24,7 @@ class TrackFileLoad extends FileLoad {
             const promises = jsonPaths
                 .map(path => {
                     let url = (path.google_url || path);
-                    return { promise: igvxhr.loadJson(url) }
+                    return { promise: this.igvxhr.loadJson(url) }
                 });
 
 
