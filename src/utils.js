@@ -183,7 +183,13 @@ let indexLookup = (dataSuffix) => {
 };
 
 // TODO: This replaces the above "indexLookup"
-const knownDataFileIndexFileLookup = extension => {
+const knownDataFileIndexFileLookup = (extension, isGZippedVCF) => {
+
+    const vcf_gz =
+        {
+            index: 'tbi',
+            isOptional: false
+        };
 
     const fna =
         {
@@ -229,6 +235,7 @@ const knownDataFileIndexFileLookup = extension => {
 
     const lut =
         {
+            vcf_gz,
             fna,
             fa,
             fasta,
@@ -244,7 +251,9 @@ const knownDataFileIndexFileLookup = extension => {
             isOptional: true
         };
 
-    return lut[ extension ]  || any;
+    const key = true === isGZippedVCF ? `${ extension }_gz` : extension;
+
+    return lut[ key ] || any;
 
 };
 

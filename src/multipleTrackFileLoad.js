@@ -280,7 +280,10 @@ const assessIndexFileAssociations = (LUT, trackConfigurationLUT) => {
 
         if (undefined === configuration.errorString) {
 
-            const { index: indexExtension, isOptional } = Utils.knownDataFileIndexFileLookup( FileUtils.getExtension(configuration.name) );
+            let extension = FileUtils.getExtension(configuration.name)
+            const suffix = configuration.name.split('.').pop()
+            const isGZippedVCF = ('vcf' === extension && 'gz' === suffix)
+            const { index: indexExtension, isOptional } = Utils.knownDataFileIndexFileLookup(extension, isGZippedVCF);
 
             const indexKey = `${ key }.${ indexExtension }`;
 
