@@ -292,9 +292,9 @@ const assessIndexFileAssociations = (LUT, trackConfigurationLUT) => {
             let alternativeIndexKey = `${ pieces.join('.') }.${ indexExtension }`
 
             if (LUT[ indexKey ]) {
-                configuration.indexURL = LUT[ indexKey ];
+                configuration.indexURL = LUT[ indexKey ].google_url ? LUT[ indexKey ].url : LUT[ indexKey ];
             } else if (LUT[ alternativeIndexKey ]) {
-                configuration.indexURL = LUT[ alternativeIndexKey ];
+                configuration.indexURL = LUT[ indexKey ].google_url ? LUT[ alternativeIndexKey ].url : LUT[ alternativeIndexKey ];
             } else if (false === isOptional) {
                 configuration.errorString = `ERROR: data file ${ key } is missing required index file`;
             }
