@@ -1,4 +1,5 @@
 import { Alert } from "../node_modules/igv-ui/src/index.js";
+import EventBus from "./eventBus.js";
 import { QRCode } from './qrcode.js';
 import FileLoadManager from './fileLoadManager.js';
 import FileLoadWidget from './fileLoadWidget.js';
@@ -11,9 +12,9 @@ import MultipleTrackFileLoad from "./multipleTrackFileLoad.js";
 import * as GoogleFilePicker from './googleFilePicker.js';
 import * as Utils from './utils.js';
 
-
 export {
     Alert,
+    EventBus,
     QRCode,
     GoogleFilePicker,
     Utils,
