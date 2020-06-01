@@ -243,6 +243,9 @@ class EventBus {
 
 }
 
+// Global event bus
+EventBus.globalBus = new EventBus();
+
 /**
  * @fileoverview
  * - Using the 'QRCode for Javascript library'

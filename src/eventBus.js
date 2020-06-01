@@ -38,4 +38,7 @@ class EventBus {
 
 }
 
+// Global event bus
+EventBus.globalBus = new EventBus();
+
 export default EventBus;
