@@ -6,7 +6,7 @@ import { createGenericSelectModal, createTrackURLModal } from '../node_modules/i
 let fileLoadWidget;
 let multipleTrackFileLoad;
 let encodeModalTable;
-
+let genomeChangeListener
 const createTrackWidgets = ($igvMain, $localFileInput, $dropboxButton, googleEnabled, $googleDriveButton, encodeTrackModalId, urlModalId, igvxhr, google, trackLoadHandler) => {
 
     const $urlModal = $(createTrackURLModal(urlModalId))
@@ -59,6 +59,17 @@ const createTrackWidgets = ($igvMain, $localFileInput, $dropboxButton, googleEna
 
     encodeModalTable = new ModalTable(encodeModalTableConfig)
 
+    genomeChangeListener = {
+
+        receiveEvent: async ({ data }) => {
+            const { genomeID } = data;
+            const datasource = new EncodeDataSource(genomeID);
+            encodeModalTable.setDatasource(datasource)
+        }
+    }
+
+    EventBus.globalBus.subscribe('DidChangeGenome', genomeChangeListener);
+
 }
 
 const createTrackWidgetsWithTrackRegistry = ($igvMain, $dropdownMenu, $localFileInput, $dropboxButton, googleEnabled, $googleDriveButton, encodeTrackModalId, urlModalId, selectModalId, igvxhr, google, trackRegistryFile, trackLoadHandler) => {
@@ -68,10 +79,12 @@ const createTrackWidgetsWithTrackRegistry = ($igvMain, $dropdownMenu, $localFile
     const $genericSelectModal = $(createGenericSelectModal(selectModalId, `${ selectModalId }-select`));
     $igvMain.append($genericSelectModal);
 
-    const genomeChangeListener = {
+    genomeChangeListener = {
 
         receiveEvent: async ({ data }) => {
             const { genomeID } = data;
+            const datasource = new EncodeDataSource(genomeID);
+            encodeModalTable.setDatasource(datasource)
             await updateTrackMenus(genomeID, encodeModalTable, trackRegistryFile, $dropdownMenu, $genericSelectModal, trackLoadHandler);
         }
     }
@@ -116,11 +129,7 @@ const updateTrackMenus = async (genomeID, encodeModalTable, trackRegistryFile, $
     for (let json of jsons) {
 
         if ('ENCODE' === json.type) {
-
-            const datasource = new EncodeDataSource(json.genomeID);
-            encodeModalTable.setDatasource(datasource)
             buttonConfigurations.push(json);
-
         } else if ('GTEX' === json.type) {
 
             let info = undefined;
