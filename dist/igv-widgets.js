@@ -188,6 +188,72 @@ function embedCSS() {
 
 }
 
+const createGenericSelectModal = (id, select_id) => {
+
+    const generic_select_modal_string =
+        `<div id="${ id }" class="modal">
+
+            <div class="modal-dialog modal-lg">
+
+                <div class="modal-content">
+
+                    <div class="modal-header">
+                        <div class="modal-title"></div>
+                        <button type="button" class="close" data-dismiss="modal">
+                            <span>&times;</span>
+                        </button>
+                    </div>
+        
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <select id="${ select_id }" class="form-control"></select>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>`;
+
+    return generic_select_modal_string;
+};
+
+const createTrackURLModal = id => {
+
+    const html =
+        `<div id="${ id }" class="modal">
+
+            <div class="modal-dialog modal-lg">
+    
+                <div class="modal-content">
+    
+                    <div class="modal-header">
+                        <div class="modal-title">Track URL</div>
+    
+                        <button type="button" class="close" data-dismiss="modal">
+                            <span>&times;</span>
+                        </button>
+    
+                    </div>
+    
+                    <div class="modal-body">
+                    </div>
+    
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-sm btn-secondary" data-dismiss="modal">OK</button>
+                    </div>
+    
+                </div>
+    
+            </div>
+
+        </div>`;
+
+    return html;
+};
+
 const createURLModal = (id, title) => {
 
     const html =
@@ -1280,6 +1346,30 @@ QRCode.prototype.clear = function () {
  * @name QRCode.CorrectLevel
  */
 QRCode.CorrectLevel = QRErrorCorrectLevel;
+
+const GtexUtils = {
+
+    getTissueInfo: function (datasetId, baseURL, igvxhr) {
+        datasetId = datasetId || 'gtex_v8';
+        baseURL = baseURL || 'https://gtexportal.org/rest/v1';
+        let url = baseURL + '/dataset/tissueInfo?datasetId=' + datasetId;
+        return igvxhr.loadJson(url, {})
+    },
+
+    //https://gtexportal.org/rest/v1/association/singleTissueEqtlByLocation?chromosome=7&start=98358766&end=101523798&tissueName=Liver&datasetId=gtex_v7
+    //https://gtexportal.org/rest/v1/association/singleTissueEqtlByLocation?chromosome=7&start=98358766&end=101523798&tissueSiteDetailId=Liver&datasetId=gtex_v8
+    trackConfiguration: function (tissueSummary, baseURL) {
+        baseURL = baseURL || 'https://gtexportal.org/rest/v1';
+        return {
+            type: "eqtl",
+            sourceType: "gtex-ws",
+            url: baseURL + '/association/singleTissueEqtlByLocation',
+            tissueSiteDetailId: tissueSummary.tissueSiteDetailId,
+            name: (tissueSummary.tissueSiteDetailId.split('_').join(' ')),
+            visibilityWindow: 250000
+        }
+    }
+};
 
 function getExtension(url) {
 
@@ -8818,4 +8908,710 @@ function configureSaveSessionModal$1($rootContainer, prefix, JSONProvider, sessi
 
 }
 
-export { Alert, EventBus, FileLoad, FileLoadManager, FileLoadWidget, GenomeFileLoad, googleFilePicker as GoogleFilePicker, MultipleTrackFileLoad, QRCode, SessionController, SessionFileLoad, TrackFileLoad, utils as Utils, createSessionWidgets };
+/*
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2016-2017 The Regents of the University of California
+ * Author: Jim Robinson
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+const getDataWrapper = function (data) {
+
+    if (typeof(data) == 'string' || data instanceof String) {
+        return new StringDataWrapper(data);
+    } else {
+        return new ByteArrayDataWrapper(data);
+    }
+};
+
+
+// Data might be a string, or an UInt8Array
+var StringDataWrapper = function (string) {
+    this.data = string;
+    this.ptr = 0;
+};
+
+StringDataWrapper.prototype.nextLine = function () {
+    //return this.split(/\r\n|\n|\r/gm);
+    var start = this.ptr,
+        idx = this.data.indexOf('\n', start);
+
+    if (idx > 0) {
+        this.ptr = idx + 1;   // Advance pointer for next line
+        return idx === start ? undefined : this.data.substring(start, idx).trim();
+    }
+    else {
+        // Last line
+        this.ptr = this.data.length;
+        return (start >= this.data.length) ? undefined : this.data.substring(start).trim();
+    }
+};
+
+// For use in applications where whitespace carries meaning
+// Returns "" for an empty row (not undefined like nextLine), since this is needed in AED
+StringDataWrapper.prototype.nextLineNoTrim = function () {
+    var start = this.ptr,
+        idx = this.data.indexOf('\n', start),
+        data = this.data;
+
+    if (idx > 0) {
+        this.ptr = idx + 1;   // Advance pointer for next line
+        if (idx > start && data.charAt(idx - 1) === '\r') {
+            // Trim CR manually in CR/LF sequence
+            return data.substring(start, idx - 1);
+        }
+        return data.substring(start, idx);
+    }
+    else {
+        var length = data.length;
+        this.ptr = length;
+        // Return undefined only at the very end of the data
+        return (start >= length) ? undefined : data.substring(start);
+    }
+};
+
+var ByteArrayDataWrapper = function (array) {
+    this.data = array;
+    this.length = this.data.length;
+    this.ptr = 0;
+};
+
+ByteArrayDataWrapper.prototype.nextLine = function () {
+
+    var c, result;
+    result = "";
+
+    if (this.ptr >= this.length) return undefined;
+
+    for (var i = this.ptr; i < this.length; i++) {
+        c = String.fromCharCode(this.data[i]);
+        if (c === '\r') continue;
+        if (c === '\n') break;
+        result = result + c;
+    }
+
+    this.ptr = i + 1;
+    return result;
+};
+
+// The ByteArrayDataWrapper does not do any trimming by default, can reuse the function
+ByteArrayDataWrapper.prototype.nextLineNoTrim = ByteArrayDataWrapper.prototype.nextLine;
+
+/*
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2019 The Regents of the University of California
+ * Author: Jim Robinson
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+const columns = [
+    'Biosample',
+    'Target',
+    'Assay Type',
+    'Output Type',
+    'Bio Rep',
+    'Tech Rep',
+    'Format',
+    'Experiment',
+    'Accession',
+    'Lab'
+];
+
+class EncodeDataSource {
+
+    constructor(genomeId, filter, suffix) {
+        this.genomeId = genomeId;
+        this.filter = filter;
+        this.suffix = suffix || ".txt";
+    };
+
+    async tableData() {
+        return this.fetchData()
+    };
+
+    async tableColumns() {
+        return columns;
+    };
+
+    async fetchData() {
+
+        const id = canonicalId(this.genomeId);
+        const url = "https://s3.amazonaws.com/igv.org.app/encode/" + id + this.suffix;
+        const response = await fetch(url);
+        const data = await response.text();
+        const records = parseTabData(data, this.filter);
+        records.sort(encodeSort);
+        return records
+    }
+
+    static supportsGenome(genomeId) {
+        const knownGenomes = new Set(["ce10", "ce11", "dm3", "dm6", "GRCh38", "hg19", "mm9", "mm10"]);
+        const id = canonicalId(genomeId);
+        return knownGenomes.has(id)
+    }
+
+}
+
+function parseTabData(data, filter) {
+
+    var dataWrapper,
+        line;
+
+    dataWrapper = getDataWrapper(data);
+
+    let records = [];
+
+    dataWrapper.nextLine();  // Skip header
+    while (line = dataWrapper.nextLine()) {
+
+        let tokens = line.split("\t");
+        let record = {
+            "Assembly": tokens[1],
+            "ExperimentID": tokens[0],
+            "Experiment": tokens[0].substr(13).replace("/", ""),
+            "Biosample": tokens[2],
+            "Assay Type": tokens[3],
+            "Target": tokens[4],
+            "Format": tokens[8],
+            "Output Type": tokens[7],
+            "Lab": tokens[9],
+            "url": "https://www.encodeproject.org" + tokens[10],
+            "Bio Rep": tokens[5],
+            "Tech Rep": tokens[6],
+            "Accession": tokens[11]
+        };
+        record["name"] = constructName(record);
+
+        if (filter === undefined || filter(record)) {
+            records.push(record);
+        }
+    }
+
+    return records;
+}
+
+function constructName(record) {
+
+    let name = record["Biosample"] || "";
+
+    if (record["Target"]) {
+        name += " " + record["Target"];
+    }
+    if (record["Assay Type"].toLowerCase() !== "chip-seq") {
+        name += " " + record["Assay Type"];
+    }
+    // if (record["Bio Rep"]) {
+    //     name += " " + record["Bio Rep"];
+    // }
+    // if (record["Tech Rep"]) {
+    //     name += (record["Bio Rep"] ? ":" : " 0:") + record["Tech Rep"];
+    // }
+    //
+    // name += " " + record["Output Type"];
+    //
+    // name += " " + record["Accession"];
+
+    return name
+
+}
+
+function encodeSort(a, b) {
+    var aa1,
+        aa2,
+        cc1,
+        cc2,
+        tt1,
+        tt2;
+
+    aa1 = a['Assay Type'];
+    aa2 = b['Assay Type'];
+    cc1 = a['Biosample'];
+    cc2 = b['Biosample'];
+    tt1 = a['Target'];
+    tt2 = b['Target'];
+
+    if (aa1 === aa2) {
+        if (cc1 === cc2) {
+            if (tt1 === tt2) {
+                return 0;
+            } else if (tt1 < tt2) {
+                return -1;
+            } else {
+                return 1;
+            }
+        } else if (cc1 < cc2) {
+            return -1;
+        } else {
+            return 1;
+        }
+    } else {
+        if (aa1 < aa2) {
+            return -1;
+        } else {
+            return 1;
+        }
+    }
+}
+
+function canonicalId(genomeId) {
+
+    switch(genomeId) {
+        case "hg38":
+            return "GRCh38"
+        case "CRCh37":
+            return "hg19"
+        case "GRCm38":
+            return "mm10"
+        case "NCBI37":
+            return "mm9"
+        case "WBcel235":
+            return "ce11"
+        case "WS220":
+            return "ce10"
+        default:
+            return genomeId
+    }
+
+}
+
+class ModalTable {
+
+    constructor(args) {
+
+        this.datasource = args.datasource;
+        this.selectHandler = args.selectHandler;
+
+        this.pageLength = args.pageLength || 10;
+
+        if (args.selectionStyle) {
+            this.select = { style: args.selectionStyle };
+        } else {
+            this.select = true;
+        }
+
+        const id = args.id;
+        const title = args.title || '';
+        const parent = args.parent ? $(args.parent) : $('body');
+        const html = `
+        <div id="${id}" class="modal fade">
+        
+            <div class="modal-dialog modal-xl">
+        
+                <div class="modal-content">
+        
+                    <div class="modal-header">
+                        <div class="modal-title">${title}</div>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+        
+                    <div class="modal-body">
+        
+                        <div id="${id}-spinner" class="spinner-border" style="display: none;">
+                            <!-- spinner -->
+                        </div>
+        
+                        <div id="${id}-datatable-container">
+        
+                        </div>
+                    </div>
+        
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-sm btn-secondary" data-dismiss="modal">OK</button>
+                    </div>
+        
+                </div>
+        
+            </div>
+        
+        </div>
+    `;
+        const $m = $(html);
+        parent.append($m);
+
+        this.$modal = $m;
+        this.$datatableContainer = $m.find(`#${id}-datatable-container`);
+        this.$spinner = $m.find(`#${id}-spinner`);
+        const $okButton = $m.find('.modal-footer button:nth-child(2)');
+
+        $m.on('shown.bs.modal', (e) => {
+            this.buildTable();
+        });
+
+        $m.on('hidden.bs.modal', (e) => {
+            $(e.relatedTarget).find('tr.selected').removeClass('selected');
+        });
+
+        $okButton.on('click', (e) => {
+            const selected = this.getSelectedTableRowsData.call(this, this.$dataTable.$('tr.selected'));
+            if (selected && this.selectHandler) {
+                this.selectHandler(selected);
+            }
+        });
+    }
+
+    remove() {
+        this.$modal.remove();
+    }
+
+    setDatasource(datasource) {
+        this.datasource = datasource;
+        this.$datatableContainer.empty();
+        this.$table = undefined;
+    }
+
+    async buildTable () {
+
+        if (!this.$table && this.datasource) {
+
+            this.$table = $('<table cellpadding="0" cellspacing="0" border="0" class="display"></table>');
+            this.$datatableContainer.append(this.$table);
+
+            try {
+                this.startSpinner();
+                const datasource = this.datasource;
+                const tableData = await datasource.tableData();
+                const tableColumns = await datasource.tableColumns();
+                const columnFormat = tableColumns.map(c => ({title: c, data: c}));
+                const config =
+                    {
+                        data: tableData,
+                        columns: columnFormat,
+                        pageLength: this.pageLength,
+                        select: this.select,
+                        autoWidth: false,
+                        paging: true,
+                        scrollX: true,
+                        scrollY: '400px',
+                        scroller: true,
+                        scrollCollapse: true
+                    };
+
+                if (Reflect.has(datasource, 'columnDefs')) {
+                    config.columnDefs = datasource.columnDefs;
+                }
+
+                this.tableData = tableData;
+                this.$dataTable = this.$table.dataTable(config);
+                this.$table.api().columns.adjust().draw();   // Don't try to simplify this, you'll break it
+
+            } catch (e) {
+
+            } finally {
+                this.stopSpinner();
+            }
+        }
+    }
+
+
+    getSelectedTableRowsData($rows) {
+        const tableData = this.tableData;
+        const result = [];
+        if ($rows.length > 0) {
+            $rows.removeClass('selected');
+            const api = this.$table.api();
+            $rows.each(function () {
+                const index = api.row(this).index();
+                result.push(tableData[index]);
+            });
+        }
+        return result
+    }
+
+
+    startSpinner () {
+        if (this.$spinner)
+            this.$spinner.show();
+    }
+
+
+    stopSpinner () {
+        if (this.$spinner)
+            this.$spinner.hide();
+    }
+
+
+}
+
+let fileLoadWidget$1;
+let multipleTrackFileLoad;
+let encodeModalTable;
+
+const createTrackWidgets = ($igvMain, $localFileInput, $dropboxButton, googleEnabled, $googleDriveButton, encodeTrackModalId, urlModalId, igvxhr, google, trackLoadHandler) => {
+
+    const $urlModal = $(createTrackURLModal(urlModalId));
+    $igvMain.append($urlModal);
+
+    let fileLoadWidgetConfig =
+        {
+            widgetParent: $urlModal.find('.modal-body').get(0),
+            dataTitle: 'Track',
+            indexTitle: 'Track Index',
+            mode: 'url',
+            fileLoadManager: new FileLoadManager(),
+            dataOnly: false,
+            doURL: true
+        };
+
+    fileLoadWidget$1 = new FileLoadWidget(fileLoadWidgetConfig);
+
+    configureModal(fileLoadWidget$1, $urlModal.get(0), async fileLoadWidget => {
+        const paths = fileLoadWidget.retrievePaths();
+        await multipleTrackFileLoad.loadPaths( paths );
+        return true;
+    });
+
+    if (!googleEnabled) {
+        $googleDriveButton.parent().hide();
+    }
+
+    const multipleTrackFileLoadConfig =
+        {
+            $localFileInput,
+            $dropboxButton,
+            $googleDriveButton: googleEnabled ? $googleDriveButton : undefined,
+            fileLoadHandler: trackLoadHandler,
+            multipleFileSelection: true,
+            igvxhr,
+            google
+        };
+
+    multipleTrackFileLoad = new MultipleTrackFileLoad(multipleTrackFileLoadConfig);
+
+    const encodeModalTableConfig =
+        {
+            id: encodeTrackModalId,
+            title: 'ENCODE',
+            selectionStyle: 'multi',
+            pageLength: 100,
+            selectHandler: trackLoadHandler
+        };
+
+    encodeModalTable = new ModalTable(encodeModalTableConfig);
+
+};
+
+const createTrackWidgetsWithTrackRegistry = ($igvMain, $dropdownMenu, $localFileInput, $dropboxButton, googleEnabled, $googleDriveButton, encodeTrackModalId, urlModalId, selectModalId, igvxhr, google, trackRegistryFile, trackLoadHandler) => {
+
+    createTrackWidgets($igvMain, $localFileInput, $dropboxButton, googleEnabled, $googleDriveButton, encodeTrackModalId, urlModalId, igvxhr, google, trackLoadHandler);
+
+    const $genericSelectModal = $(createGenericSelectModal(selectModalId, `${ selectModalId }-select`));
+    $igvMain.append($genericSelectModal);
+
+    const genomeChangeListener = {
+
+        receiveEvent: async ({ data }) => {
+            const { genomeID } = data;
+            await updateTrackMenus(genomeID, encodeModalTable, trackRegistryFile, $dropdownMenu, $genericSelectModal, trackLoadHandler);
+        }
+    };
+
+    EventBus.globalBus.subscribe('DidChangeGenome', genomeChangeListener);
+
+};
+
+const updateTrackMenus = async (genomeID, encodeModalTable, trackRegistryFile, $dropdownMenu, $genericSelectModal, fileLoader) => {
+
+    const id_prefix = 'genome_specific_';
+
+    const $divider = $dropdownMenu.find('#igv-app-annotations-section');
+
+    const searchString = '[id^=' + id_prefix + ']';
+    const $found = $dropdownMenu.find(searchString);
+    $found.remove();
+
+    const paths = await getPathsWithTrackRegistryFile(genomeID, trackRegistryFile);
+
+    if (undefined === paths) {
+        console.warn(`There are no tracks in the track registryy for genome ${ genomeID }`);
+        return;
+    }
+
+    let responses = [];
+    try {
+        responses = await Promise.all( paths.map( path => fetch(path) ) );
+    } catch (e) {
+        Alert.presentAlert(e.message);
+    }
+
+    let jsons = [];
+    try {
+        jsons = await Promise.all( responses.map( response => response.json() ) );
+    } catch (e) {
+        Alert.presentAlert(e.message);
+    }
+
+    let buttonConfigurations = [];
+
+    for (let json of jsons) {
+
+        if ('ENCODE' === json.type) {
+
+            const datasource = new EncodeDataSource(json.genomeID);
+            encodeModalTable.setDatasource(datasource);
+            buttonConfigurations.push(json);
+
+        } else if ('GTEX' === json.type) {
+
+            let info = undefined;
+            try {
+                info = await GtexUtils.getTissueInfo(json.datasetId);
+            } catch (e) {
+                Alert.presentAlert(e.message);
+            }
+
+            if (info) {
+                json.tracks = info.tissueInfo.map(tissue => GtexUtils.trackConfiguration(tissue));
+                buttonConfigurations.push(json);
+            }
+
+        } else {
+            buttonConfigurations.push(json);
+        }
+
+    } // for (json)
+
+    buttonConfigurations = buttonConfigurations.reverse();
+    for (let buttonConfiguration of buttonConfigurations) {
+
+        const $button = $('<button>', {class: 'dropdown-item', type: 'button'});
+        const str = buttonConfiguration.label + ' ...';
+        $button.text(str);
+
+        const id = id_prefix + buttonConfiguration.label.toLowerCase().split(' ').join('_');
+        $button.attr('id', id);
+
+        $button.insertAfter($divider);
+
+        $button.on('click', () => {
+
+            if ('ENCODE' === buttonConfiguration.type) {
+                encodeModalTable.$modal.modal('show');
+            } else {
+                configureSelectModal($genericSelectModal, buttonConfiguration, fileLoader);
+                $genericSelectModal.modal('show');
+            }
+
+        });
+
+    } // for (buttonConfiguration)
+
+
+};
+
+const configureSelectModal = ($genericSelectModal, buttonConfiguration, fileLoader) => {
+
+    let markup = `<div>${ buttonConfiguration.label }</div>`;
+
+    if (buttonConfiguration.description) {
+        markup += `<div>${ buttonConfiguration.description }</div>`;
+    }
+
+    $genericSelectModal.find('.modal-title').html(markup);
+
+    $genericSelectModal.find('select').remove();
+
+    let $select = $('<select>', {class: 'form-control'});
+    $genericSelectModal.find('.form-group').append($select);
+
+    let $option = $('<option>', {text: 'Select...'});
+    $select.append($option);
+
+    $option.attr('selected', 'selected');
+    $option.val(undefined);
+
+    buttonConfiguration.tracks.reduce(($accumulator, configuration) => {
+
+        $option = $('<option>', {value: configuration.name, text: configuration.name});
+        $select.append($option);
+
+        $option.data('track', configuration);
+
+        $accumulator.append($option);
+
+        return $accumulator;
+    }, $select);
+
+    $select.on('change', () => {
+
+        let $option = $select.find('option:selected');
+        const value = $option.val();
+
+        if ('' === value) ; else {
+
+            $option.removeAttr("selected");
+
+            const configuration = $option.data('track');
+
+            fileLoader([ configuration ]);
+        }
+
+        $genericSelectModal.modal('hide');
+
+    });
+
+};
+
+const getPathsWithTrackRegistryFile = async (genomeID, trackRegistryFile) => {
+
+    let response = undefined;
+    try {
+        response = await fetch(trackRegistryFile);
+    } catch (e) {
+        console.error(e);
+    }
+
+    let trackRegistry = undefined;
+    if (response) {
+        trackRegistry = await response.json();
+    } else {
+        const e = new Error("Error retrieving registry via getPathsWithTrackRegistryFile()");
+        Alert.presentAlert(e.message);
+        throw e;
+    }
+
+    return trackRegistry[ genomeID ]
+
+};
+
+export { Alert, EventBus, FileLoad, FileLoadManager, FileLoadWidget, GenomeFileLoad, googleFilePicker as GoogleFilePicker, MultipleTrackFileLoad, QRCode, SessionController, SessionFileLoad, TrackFileLoad, utils as Utils, createSessionWidgets, createTrackWidgets, createTrackWidgetsWithTrackRegistry };
