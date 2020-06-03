@@ -11,6 +11,7 @@ import TrackFileLoad from "./trackFileLoad.js";
 import MultipleTrackFileLoad from "./multipleTrackFileLoad.js";
 import * as GoogleFilePicker from './googleFilePicker.js';
 import * as Utils from './utils.js';
+import { createSessionWidgets } from "./sessionWidgets.js";
 
 export {
     Alert,
@@ -25,5 +26,6 @@ export {
     SessionFileLoad,
     SessionController,
     TrackFileLoad,
-    MultipleTrackFileLoad
+    MultipleTrackFileLoad,
+    createSessionWidgets
 }
