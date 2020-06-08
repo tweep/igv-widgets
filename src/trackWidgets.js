@@ -1,5 +1,5 @@
 import { Alert, EventBus, FileLoadManager, FileLoadWidget, MultipleTrackFileLoad, Utils } from './index.js';
-import { EncodeDataSource, ModalTable } from '../node_modules/data-modal/js/index.js';
+import {  EncodeTrackDatasource, encodeTrackDatasourceConfigurator, ModalTable } from '../node_modules/data-modal/js/index.js';
 import { GtexUtils } from '../node_modules/igv-utils/src/index.js';
 import { createGenericSelectModal, createTrackURLModal } from '../node_modules/igv-ui/src/index.js'
 
@@ -63,8 +63,7 @@ const createTrackWidgets = ($igvMain, $localFileInput, $dropboxButton, googleEna
 
         receiveEvent: async ({ data }) => {
             const { genomeID } = data;
-            const datasource = new EncodeDataSource(genomeID);
-            encodeModalTable.setDatasource(datasource)
+            encodeModalTable.setDatasource(new EncodeTrackDatasource(encodeTrackDatasourceConfigurator(genomeID)))
         }
     }
 
@@ -83,8 +82,7 @@ const createTrackWidgetsWithTrackRegistry = ($igvMain, $dropdownMenu, $localFile
 
         receiveEvent: async ({ data }) => {
             const { genomeID } = data;
-            const datasource = new EncodeDataSource(genomeID);
-            encodeModalTable.setDatasource(datasource)
+            encodeModalTable.setDatasource(new EncodeTrackDatasource(encodeTrackDatasourceConfigurator(genomeID)))
             await updateTrackMenus(genomeID, encodeModalTable, trackRegistryFile, $dropdownMenu, $genericSelectModal, trackLoadHandler);
         }
     }
