@@ -1,13 +1,18 @@
 import { Alert, EventBus, FileLoadManager, FileLoadWidget, MultipleTrackFileLoad, Utils } from './index.js';
-import {  EncodeTrackDatasource, encodeTrackDatasourceConfigurator, ModalTable } from '../node_modules/data-modal/js/index.js';
+import ModalTable from '../node_modules/data-modal/js/modalTable.js';
+import EncodeTrackDatasource from "../node_modules/data-modal/js/encodeTrackDatasource.js"
+import { encodeTrackDatasourceConfigurator } from '../node_modules/data-modal/js/encodeTrackDatasourceConfig.js'
+import { encodeTrackDatasourceSignalConfigurator } from "../node_modules/data-modal/js/encodeTrackDatasourceSignalConfig.js"
+import { encodeTrackDatasourceOtherConfigurator } from "../node_modules/data-modal/js/encodeTrackDatasourceOtherConfig.js"
+
 import { GtexUtils } from '../node_modules/igv-utils/src/index.js';
 import { createGenericSelectModal, createTrackURLModal } from '../node_modules/igv-ui/src/index.js'
 
 let fileLoadWidget;
 let multipleTrackFileLoad;
-let encodeModalTable;
+let encodeModalTables = [];
 let genomeChangeListener
-const createTrackWidgets = ($igvMain, $localFileInput, $dropboxButton, googleEnabled, $googleDriveButton, encodeTrackModalId, urlModalId, igvxhr, google, trackLoadHandler) => {
+const createTrackWidgets = ($igvMain, $localFileInput, $dropboxButton, googleEnabled, $googleDriveButton, encodeTrackModalIds, urlModalId, igvxhr, google, trackLoadHandler) => {
 
     const $urlModal = $(createTrackURLModal(urlModalId))
     $igvMain.append($urlModal);
@@ -48,22 +53,27 @@ const createTrackWidgets = ($igvMain, $localFileInput, $dropboxButton, googleEna
 
     multipleTrackFileLoad = new MultipleTrackFileLoad(multipleTrackFileLoadConfig)
 
-    const encodeModalTableConfig =
-        {
-            id: encodeTrackModalId,
-            title: 'ENCODE',
-            selectionStyle: 'multi',
-            pageLength: 100,
-            selectHandler: trackLoadHandler
-        };
+    for (let encodeTrackModalId of encodeTrackModalIds) {
 
-    encodeModalTable = new ModalTable(encodeModalTableConfig)
+        const encodeModalTableConfig =
+            {
+                id: encodeTrackModalId,
+                title: 'ENCODE',
+                selectionStyle: 'multi',
+                pageLength: 100,
+                selectHandler: trackLoadHandler
+            }
+
+        encodeModalTables.push( new ModalTable(encodeModalTableConfig) )
+
+    }
 
     genomeChangeListener = {
 
         receiveEvent: async ({ data }) => {
             const { genomeID } = data;
-            encodeModalTable.setDatasource(new EncodeTrackDatasource(encodeTrackDatasourceConfigurator(genomeID)))
+            encodeModalTables[ 0 ].setDatasource(new EncodeTrackDatasource(encodeTrackDatasourceSignalConfigurator(genomeID)))
+            encodeModalTables[ 1 ].setDatasource(new EncodeTrackDatasource(encodeTrackDatasourceOtherConfigurator(genomeID)))
         }
     }
 
@@ -71,9 +81,9 @@ const createTrackWidgets = ($igvMain, $localFileInput, $dropboxButton, googleEna
 
 }
 
-const createTrackWidgetsWithTrackRegistry = ($igvMain, $dropdownMenu, $localFileInput, $dropboxButton, googleEnabled, $googleDriveButton, encodeTrackModalId, urlModalId, selectModalId, igvxhr, google, trackRegistryFile, trackLoadHandler) => {
+const createTrackWidgetsWithTrackRegistry = ($igvMain, $dropdownMenu, $localFileInput, $dropboxButton, googleEnabled, $googleDriveButton, encodeTrackModalIds, urlModalId, selectModalId, igvxhr, google, trackRegistryFile, trackLoadHandler) => {
 
-    createTrackWidgets($igvMain, $localFileInput, $dropboxButton, googleEnabled, $googleDriveButton, encodeTrackModalId, urlModalId, igvxhr, google, trackLoadHandler)
+    createTrackWidgets($igvMain, $localFileInput, $dropboxButton, googleEnabled, $googleDriveButton, encodeTrackModalIds, urlModalId, igvxhr, google, trackLoadHandler)
 
     const $genericSelectModal = $(createGenericSelectModal(selectModalId, `${ selectModalId }-select`));
     $igvMain.append($genericSelectModal);
@@ -82,8 +92,9 @@ const createTrackWidgetsWithTrackRegistry = ($igvMain, $dropdownMenu, $localFile
 
         receiveEvent: async ({ data }) => {
             const { genomeID } = data;
-            encodeModalTable.setDatasource(new EncodeTrackDatasource(encodeTrackDatasourceConfigurator(genomeID)))
-            await updateTrackMenus(genomeID, encodeModalTable, trackRegistryFile, $dropdownMenu, $genericSelectModal, trackLoadHandler);
+            encodeModalTables[ 0 ].setDatasource(new EncodeTrackDatasource(encodeTrackDatasourceSignalConfigurator(genomeID)))
+            encodeModalTables[ 1 ].setDatasource(new EncodeTrackDatasource(encodeTrackDatasourceOtherConfigurator(genomeID)))
+            await updateTrackMenus(genomeID, encodeModalTables, trackRegistryFile, $dropdownMenu, $genericSelectModal, trackLoadHandler);
         }
     }
 
@@ -91,7 +102,7 @@ const createTrackWidgetsWithTrackRegistry = ($igvMain, $dropdownMenu, $localFile
 
 }
 
-const updateTrackMenus = async (genomeID, encodeModalTable, trackRegistryFile, $dropdownMenu, $genericSelectModal, fileLoader) => {
+const updateTrackMenus = async (genomeID, encodeModalTables, trackRegistryFile, $dropdownMenu, $genericSelectModal, fileLoader) => {
 
     const id_prefix = 'genome_specific_';
 
@@ -127,6 +138,12 @@ const updateTrackMenus = async (genomeID, encodeModalTable, trackRegistryFile, $
     for (let json of jsons) {
 
         if ('ENCODE' === json.type) {
+
+            let i = 0;
+            for (let config of [ encodeTrackDatasourceSignalConfigurator(genomeID), encodeTrackDatasourceOtherConfigurator(json.genomeID) ]) {
+                encodeModalTables[ i++ ].setDatasource( new EncodeTrackDatasource(config) )
+            }
+
             buttonConfigurations.push(json);
         } else if ('GTEX' === json.type) {
 
@@ -148,33 +165,44 @@ const updateTrackMenus = async (genomeID, encodeModalTable, trackRegistryFile, $
 
     } // for (json)
 
-    buttonConfigurations = buttonConfigurations.reverse();
-    for (let buttonConfiguration of buttonConfigurations) {
 
-        const $button = $('<button>', {class: 'dropdown-item', type: 'button'});
-        const str = buttonConfiguration.label + ' ...';
-        $button.text(str);
+    let encodeConfiguration
+    let configurations = []
+    for (let config of buttonConfigurations) {
+        if (config.type && 'ENCODE' === config.type) {
+            encodeConfiguration = config
+        } else {
+            configurations.unshift(config)
+        }
+    }
 
-        const id = id_prefix + buttonConfiguration.label.toLowerCase().split(' ').join('_');
-        $button.attr('id', id);
+    createDropdownButton($divider, 'ENCODE Other',   id_prefix)
+        .on('click', () => encodeModalTables[ 1 ].$modal.modal('show'));
 
-        $button.insertAfter($divider);
+    createDropdownButton($divider, 'ENCODE Signals', id_prefix)
+        .on('click', () => encodeModalTables[ 0 ].$modal.modal('show'));
+
+    for (let config of configurations) {
+
+        const $button = createDropdownButton($divider, config.label, id_prefix)
 
         $button.on('click', () => {
-
-            if ('ENCODE' === buttonConfiguration.type) {
-                encodeModalTable.$modal.modal('show');
-            } else {
-                configureSelectModal($genericSelectModal, buttonConfiguration, fileLoader);
-                $genericSelectModal.modal('show');
-            }
-
+            configureSelectModal($genericSelectModal, config, fileLoader);
+            $genericSelectModal.modal('show');
         });
 
-    } // for (buttonConfiguration)
+    }
 
 
 };
+
+const createDropdownButton = ($divider, buttonText, id_prefix) => {
+    const $button = $('<button>', { class: 'dropdown-item', type: 'button' })
+    $button.text(`${ buttonText } ...`)
+    $button.attr('id', `${ id_prefix }${ buttonText.toLowerCase().split(' ').join('_') }`)
+    $button.insertAfter($divider)
+    return $button
+}
 
 const configureSelectModal = ($genericSelectModal, buttonConfiguration, fileLoader) => {
 
