@@ -8908,6 +8908,175 @@ function configureSaveSessionModal$1($rootContainer, prefix, JSONProvider, sessi
 
 }
 
+class ModalTable {
+
+    constructor(args) {
+
+        this.datasource = args.datasource;
+        this.selectHandler = args.selectHandler;
+
+        this.pageLength = args.pageLength || 10;
+
+        if (args.selectionStyle) {
+            this.select = { style: args.selectionStyle };
+        } else {
+            this.select = true;
+        }
+
+        const id = args.id;
+        const title = args.title || '';
+        const parent = args.parent ? $(args.parent) : $('body');
+        const html = `
+        <div id="${id}" class="modal fade">
+        
+            <div class="modal-dialog modal-xl">
+        
+                <div class="modal-content">
+        
+                    <div class="modal-header">
+                        <div class="modal-title">${title}</div>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+        
+                    <div class="modal-body">
+        
+                        <div id="${id}-spinner" class="spinner-border" style="display: none;">
+                            <!-- spinner -->
+                        </div>
+        
+                        <div id="${id}-datatable-container">
+        
+                        </div>
+                    </div>
+        
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-sm btn-secondary" data-dismiss="modal">OK</button>
+                    </div>
+        
+                </div>
+        
+            </div>
+        
+        </div>
+    `;
+        const $m = $(html);
+        parent.append($m);
+
+        this.$modal = $m;
+        this.$datatableContainer = $m.find(`#${id}-datatable-container`);
+        this.$spinner = $m.find(`#${id}-spinner`);
+        const $okButton = $m.find('.modal-footer button:nth-child(2)');
+
+        $m.on('shown.bs.modal', (e) => {
+            this.buildTable();
+        });
+
+        $m.on('hidden.bs.modal', (e) => {
+            $(e.relatedTarget).find('tr.selected').removeClass('selected');
+        });
+
+        $okButton.on('click', (e) => {
+            const selected = this.getSelectedTableRowsData.call(this, this.$dataTable.$('tr.selected'));
+            if (selected && this.selectHandler) {
+                this.selectHandler(selected);
+            }
+        });
+    }
+
+    remove() {
+        this.$modal.remove();
+    }
+
+    setDatasource(datasource) {
+        this.datasource = datasource;
+        this.$datatableContainer.empty();
+        this.$table = undefined;
+    }
+
+    async buildTable () {
+
+        if (!this.$table && this.datasource) {
+
+            this.$table = $('<table class="display"></table>');
+            this.$datatableContainer.append(this.$table);
+
+            try {
+                this.startSpinner();
+
+                const tableData = await this.datasource.tableData();
+                const tableColumns = await this.datasource.tableColumns();
+
+                const config =
+                    {
+                        data: tableData,
+                        columns: tableColumns.map(c => ({ title: c, data: c })),
+                        pageLength: this.pageLength,
+                        select: this.select,
+                        autoWidth: false,
+                        paging: true,
+                        scrollX: true,
+                        scrollY: '400px',
+                    };
+
+                if (this.datasource.columnDefs) {
+                    config.columnDefs = this.datasource.columnDefs;
+                }
+
+                // API object
+                this.api = this.$table.DataTable(config);
+
+                // Preserve sort order. For some reason it gets garbled by default
+                // this.api.column( 0 ).data().sort().draw();
+
+                // Adjust column widths
+                this.api.columns.adjust().draw();
+
+                // jQuery object
+                this.$dataTable = this.$table.dataTable();
+
+                this.tableData = tableData;
+
+
+            } catch (e) {
+
+            } finally {
+                this.stopSpinner();
+            }
+        }
+    }
+
+    getSelectedTableRowsData($rows) {
+        const tableData = this.tableData;
+        const result = [];
+        if ($rows.length > 0) {
+            $rows.removeClass('selected');
+            const api = this.$table.api();
+            $rows.each(function () {
+                const index = api.row(this).index();
+                result.push(tableData[index]);
+            });
+            return this.datasource.tableSelectionHandler(result)
+        } else {
+            return undefined;
+        }
+
+    }
+
+    startSpinner () {
+        if (this.$spinner)
+            this.$spinner.show();
+    }
+
+    stopSpinner () {
+        if (this.$spinner)
+            this.$spinner.hide();
+    }
+
+}
+
 class GenericMapDatasource {
 
     constructor(config) {
@@ -9266,180 +9435,59 @@ function canonicalId(genomeId) {
 
 }
 
-class ModalTable {
-
-    constructor(args) {
-
-        this.datasource = args.datasource;
-        this.selectHandler = args.selectHandler;
-
-        this.pageLength = args.pageLength || 10;
-
-        if (args.selectionStyle) {
-            this.select = { style: args.selectionStyle };
-        } else {
-            this.select = true;
-        }
-
-        const id = args.id;
-        const title = args.title || '';
-        const parent = args.parent ? $(args.parent) : $('body');
-        const html = `
-        <div id="${id}" class="modal fade">
-        
-            <div class="modal-dialog modal-xl">
-        
-                <div class="modal-content">
-        
-                    <div class="modal-header">
-                        <div class="modal-title">${title}</div>
-                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                            <span aria-hidden="true">&times;</span>
-                        </button>
-                    </div>
-        
-                    <div class="modal-body">
-        
-                        <div id="${id}-spinner" class="spinner-border" style="display: none;">
-                            <!-- spinner -->
-                        </div>
-        
-                        <div id="${id}-datatable-container">
-        
-                        </div>
-                    </div>
-        
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-sm btn-outline-secondary" data-dismiss="modal">Cancel</button>
-                        <button type="button" class="btn btn-sm btn-secondary" data-dismiss="modal">OK</button>
-                    </div>
-        
-                </div>
-        
-            </div>
-        
-        </div>
-    `;
-        const $m = $(html);
-        parent.append($m);
-
-        this.$modal = $m;
-        this.$datatableContainer = $m.find(`#${id}-datatable-container`);
-        this.$spinner = $m.find(`#${id}-spinner`);
-        const $okButton = $m.find('.modal-footer button:nth-child(2)');
-
-        $m.on('shown.bs.modal', (e) => {
-            this.buildTable();
-        });
-
-        $m.on('hidden.bs.modal', (e) => {
-            $(e.relatedTarget).find('tr.selected').removeClass('selected');
-        });
-
-        $okButton.on('click', (e) => {
-            const selected = this.getSelectedTableRowsData.call(this, this.$dataTable.$('tr.selected'));
-            if (selected && this.selectHandler) {
-                this.selectHandler(selected);
-            }
-        });
-    }
-
-    remove() {
-        this.$modal.remove();
-    }
-
-    setDatasource(datasource) {
-        this.datasource = datasource;
-        this.$datatableContainer.empty();
-        this.$table = undefined;
-    }
-
-    async buildTable () {
-
-        if (!this.$table && this.datasource) {
-
-            this.$table = $('<table class="display"></table>');
-            this.$datatableContainer.append(this.$table);
-
-            try {
-                this.startSpinner();
-
-                const tableData = await this.datasource.tableData();
-                const tableColumns = await this.datasource.tableColumns();
-
-                const config =
-                    {
-                        data: tableData,
-                        columns: tableColumns.map(c => ({ title: c, data: c })),
-                        pageLength: this.pageLength,
-                        select: this.select,
-                        autoWidth: false,
-                        paging: true,
-                        scrollX: true,
-                        scrollY: '400px',
-                    };
-
-                if (this.datasource.columnDefs) {
-                    config.columnDefs = this.datasource.columnDefs;
-                }
-
-                // API object
-                this.api = this.$table.DataTable(config);
-
-                // Preserve sort order. For some reason it gets garbled by default
-                // this.api.column( 0 ).data().sort().draw();
-
-                // Adjust column widths
-                this.api.columns.adjust().draw();
-
-                // jQuery object
-                this.$dataTable = this.$table.dataTable();
-
-                this.tableData = tableData;
-
-
-            } catch (e) {
-
-            } finally {
-                this.stopSpinner();
-            }
-        }
-    }
-
-    getSelectedTableRowsData($rows) {
-        const tableData = this.tableData;
-        const result = [];
-        if ($rows.length > 0) {
-            $rows.removeClass('selected');
-            const api = this.$table.api();
-            $rows.each(function () {
-                const index = api.row(this).index();
-                result.push(tableData[index]);
-            });
-            return this.datasource.tableSelectionHandler(result)
-        } else {
-            return undefined;
-        }
-
-    }
-
-    startSpinner () {
-        if (this.$spinner)
-            this.$spinner.show();
-    }
-
-    stopSpinner () {
-        if (this.$spinner)
-            this.$spinner.hide();
-    }
-
-}
-
-const encodeTrackDatasourceConfigurator = genomeId => {
+const encodeTrackDatasourceSignalConfigurator = genomeId => {
 
     return {
         isJSON: false,
         genomeId,
+        suffix: '.signals.txt',
+        dataSetPathPrefix: 'https://www.encodeproject.org',
+        urlPrefix: 'https://s3.amazonaws.com/igv.org.app/encode/',
+        dataSetPath: undefined,
+        addIndexColumn: false,
+        columns:
+            [
+                'ID',           // hide
+                'Assembly',     // hide
+                'Biosample',
+                'AssayType',
+                'Target',
+                'BioRep',
+                'TechRep',
+                'OutputType',
+                'Format',
+                'Lab',
+                'HREF',         // hide
+                'Accession',
+                'Experiment'
+            ],
+        titles:
+            {
+                AssayType: 'Assay Type'
+            },
+        hiddenColumns:
+            [
+                'ID',
+                'Assembly',
+                'HREF'
+            ],
+        parser: undefined,
+        selectionHandler: selectionList => {
+            return selectionList.map(({ name, HREF }) => {
+                return { name, url: HREF }
+            })
+        }
+
+    }
+
+};
+
+const encodeTrackDatasourceOtherConfigurator = genomeId => {
+
+    return {
+        isJSON: false,
+        genomeId,
+        suffix: '.other.txt',
         dataSetPathPrefix: 'https://www.encodeproject.org',
         urlPrefix: 'https://s3.amazonaws.com/igv.org.app/encode/',
         dataSetPath: undefined,
@@ -9483,9 +9531,9 @@ const encodeTrackDatasourceConfigurator = genomeId => {
 
 let fileLoadWidget$1;
 let multipleTrackFileLoad;
-let encodeModalTable;
+let encodeModalTables = [];
 let genomeChangeListener;
-const createTrackWidgets = ($igvMain, $localFileInput, $dropboxButton, googleEnabled, $googleDriveButton, encodeTrackModalId, urlModalId, igvxhr, google, trackLoadHandler) => {
+const createTrackWidgets = ($igvMain, $localFileInput, $dropboxButton, googleEnabled, $googleDriveButton, encodeTrackModalIds, urlModalId, igvxhr, google, trackLoadHandler) => {
 
     const $urlModal = $(createTrackURLModal(urlModalId));
     $igvMain.append($urlModal);
@@ -9526,22 +9574,27 @@ const createTrackWidgets = ($igvMain, $localFileInput, $dropboxButton, googleEna
 
     multipleTrackFileLoad = new MultipleTrackFileLoad(multipleTrackFileLoadConfig);
 
-    const encodeModalTableConfig =
-        {
-            id: encodeTrackModalId,
-            title: 'ENCODE',
-            selectionStyle: 'multi',
-            pageLength: 100,
-            selectHandler: trackLoadHandler
-        };
+    for (let encodeTrackModalId of encodeTrackModalIds) {
 
-    encodeModalTable = new ModalTable(encodeModalTableConfig);
+        const encodeModalTableConfig =
+            {
+                id: encodeTrackModalId,
+                title: 'ENCODE',
+                selectionStyle: 'multi',
+                pageLength: 100,
+                selectHandler: trackLoadHandler
+            };
+
+        encodeModalTables.push( new ModalTable(encodeModalTableConfig) );
+
+    }
 
     genomeChangeListener = {
 
         receiveEvent: async ({ data }) => {
             const { genomeID } = data;
-            encodeModalTable.setDatasource(new EncodeTrackDatasource(encodeTrackDatasourceConfigurator(genomeID)));
+            encodeModalTables[ 0 ].setDatasource(new EncodeTrackDatasource(encodeTrackDatasourceSignalConfigurator(genomeID)));
+            encodeModalTables[ 1 ].setDatasource(new EncodeTrackDatasource(encodeTrackDatasourceOtherConfigurator(genomeID)));
         }
     };
 
@@ -9549,9 +9602,9 @@ const createTrackWidgets = ($igvMain, $localFileInput, $dropboxButton, googleEna
 
 };
 
-const createTrackWidgetsWithTrackRegistry = ($igvMain, $dropdownMenu, $localFileInput, $dropboxButton, googleEnabled, $googleDriveButton, encodeTrackModalId, urlModalId, selectModalId, igvxhr, google, trackRegistryFile, trackLoadHandler) => {
+const createTrackWidgetsWithTrackRegistry = ($igvMain, $dropdownMenu, $localFileInput, $dropboxButton, googleEnabled, $googleDriveButton, encodeTrackModalIds, urlModalId, selectModalId, igvxhr, google, trackRegistryFile, trackLoadHandler) => {
 
-    createTrackWidgets($igvMain, $localFileInput, $dropboxButton, googleEnabled, $googleDriveButton, encodeTrackModalId, urlModalId, igvxhr, google, trackLoadHandler);
+    createTrackWidgets($igvMain, $localFileInput, $dropboxButton, googleEnabled, $googleDriveButton, encodeTrackModalIds, urlModalId, igvxhr, google, trackLoadHandler);
 
     const $genericSelectModal = $(createGenericSelectModal(selectModalId, `${ selectModalId }-select`));
     $igvMain.append($genericSelectModal);
@@ -9560,8 +9613,9 @@ const createTrackWidgetsWithTrackRegistry = ($igvMain, $dropdownMenu, $localFile
 
         receiveEvent: async ({ data }) => {
             const { genomeID } = data;
-            encodeModalTable.setDatasource(new EncodeTrackDatasource(encodeTrackDatasourceConfigurator(genomeID)));
-            await updateTrackMenus(genomeID, encodeModalTable, trackRegistryFile, $dropdownMenu, $genericSelectModal, trackLoadHandler);
+            encodeModalTables[ 0 ].setDatasource(new EncodeTrackDatasource(encodeTrackDatasourceSignalConfigurator(genomeID)));
+            encodeModalTables[ 1 ].setDatasource(new EncodeTrackDatasource(encodeTrackDatasourceOtherConfigurator(genomeID)));
+            await updateTrackMenus(genomeID, encodeModalTables, trackRegistryFile, $dropdownMenu, $genericSelectModal, trackLoadHandler);
         }
     };
 
@@ -9569,7 +9623,7 @@ const createTrackWidgetsWithTrackRegistry = ($igvMain, $dropdownMenu, $localFile
 
 };
 
-const updateTrackMenus = async (genomeID, encodeModalTable, trackRegistryFile, $dropdownMenu, $genericSelectModal, fileLoader) => {
+const updateTrackMenus = async (genomeID, encodeModalTables, trackRegistryFile, $dropdownMenu, $genericSelectModal, fileLoader) => {
 
     const id_prefix = 'genome_specific_';
 
@@ -9605,6 +9659,12 @@ const updateTrackMenus = async (genomeID, encodeModalTable, trackRegistryFile, $
     for (let json of jsons) {
 
         if ('ENCODE' === json.type) {
+
+            let i = 0;
+            for (let config of [ encodeTrackDatasourceSignalConfigurator(genomeID), encodeTrackDatasourceOtherConfigurator(json.genomeID) ]) {
+                encodeModalTables[ i++ ].setDatasource( new EncodeTrackDatasource(config) );
+            }
+
             buttonConfigurations.push(json);
         } else if ('GTEX' === json.type) {
 
@@ -9625,33 +9685,39 @@ const updateTrackMenus = async (genomeID, encodeModalTable, trackRegistryFile, $
         }
 
     } // for (json)
+    let configurations = [];
+    for (let config of buttonConfigurations) {
+        if (config.type && 'ENCODE' === config.type) ; else {
+            configurations.unshift(config);
+        }
+    }
 
-    buttonConfigurations = buttonConfigurations.reverse();
-    for (let buttonConfiguration of buttonConfigurations) {
+    createDropdownButton($divider, 'ENCODE Other',   id_prefix)
+        .on('click', () => encodeModalTables[ 1 ].$modal.modal('show'));
 
-        const $button = $('<button>', {class: 'dropdown-item', type: 'button'});
-        const str = buttonConfiguration.label + ' ...';
-        $button.text(str);
+    createDropdownButton($divider, 'ENCODE Signals', id_prefix)
+        .on('click', () => encodeModalTables[ 0 ].$modal.modal('show'));
 
-        const id = id_prefix + buttonConfiguration.label.toLowerCase().split(' ').join('_');
-        $button.attr('id', id);
+    for (let config of configurations) {
 
-        $button.insertAfter($divider);
+        const $button = createDropdownButton($divider, config.label, id_prefix);
 
         $button.on('click', () => {
-
-            if ('ENCODE' === buttonConfiguration.type) {
-                encodeModalTable.$modal.modal('show');
-            } else {
-                configureSelectModal($genericSelectModal, buttonConfiguration, fileLoader);
-                $genericSelectModal.modal('show');
-            }
-
+            configureSelectModal($genericSelectModal, config, fileLoader);
+            $genericSelectModal.modal('show');
         });
 
-    } // for (buttonConfiguration)
+    }
 
 
+};
+
+const createDropdownButton = ($divider, buttonText, id_prefix) => {
+    const $button = $('<button>', { class: 'dropdown-item', type: 'button' });
+    $button.text(`${ buttonText } ...`);
+    $button.attr('id', `${ id_prefix }${ buttonText.toLowerCase().split(' ').join('_') }`);
+    $button.insertAfter($divider);
+    return $button
 };
 
 const configureSelectModal = ($genericSelectModal, buttonConfiguration, fileLoader) => {
