@@ -9627,7 +9627,8 @@ const updateTrackMenus = async (genomeID, encodeModalTables, trackRegistryFile, 
 
     const id_prefix = 'genome_specific_';
 
-    const $divider = $dropdownMenu.find('#igv-app-annotations-section');
+    // const $divider = $dropdownMenu.find('#igv-app-annotations-section');
+    const $divider = $dropdownMenu.find('.dropdown-divider');
 
     const searchString = '[id^=' + id_prefix + ']';
     const $found = $dropdownMenu.find(searchString);
