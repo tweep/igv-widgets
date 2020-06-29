@@ -9339,7 +9339,7 @@ class EncodeTrackDatasource extends GenericMapDatasource {
             }
 
             // additions and edits
-            record[ 'ExperimentID' ] = record[ 'Experiment' ].substr(13).replace("/", "");
+            record[ 'Experiment' ] = record[ 'ID' ].substr(13).replace("/", "");
             record['HREF'] = `${ this.dataSetPathPrefix }${ record['HREF'] }`;
             record[ 'name' ] = constructName(record);
 
@@ -9463,7 +9463,10 @@ const encodeTrackDatasourceSignalConfigurator = genomeId => {
             ],
         titles:
             {
-                AssayType: 'Assay Type'
+                AssayType: 'Assay Type',
+                OutputType: 'Output Type',
+                BioRep: 'Bio Rep',
+                TechRep: 'Tech Rep'
             },
         hiddenColumns:
             [
@@ -9510,7 +9513,10 @@ const encodeTrackDatasourceOtherConfigurator = genomeId => {
             ],
         titles:
             {
-                AssayType: 'Assay Type'
+                AssayType: 'Assay Type',
+                OutputType: 'Output Type',
+                BioRep: 'Bio Rep',
+                TechRep: 'Tech Rep'
             },
         hiddenColumns:
             [
