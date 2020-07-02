@@ -1,6 +1,28 @@
-import FileLoad from "./fileLoad.js";
+/*
+ *  The MIT License (MIT)
+ *
+ * Copyright (c) 2016-2017 The Regents of the University of California
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
+ * associated documentation files (the "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the
+ * following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all copies or substantial
+ * portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+ * BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,  FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+ * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *
+ */
+
 import {Alert} from "../node_modules/igv-ui/src/index.js"
-//import igvxhr from "./igvjs/igvxhr.js";
+import FileLoad from "./fileLoad.js";
 import {FileUtils, TrackUtils} from "../node_modules/igv-utils/src/index.js"
 import * as Utils from './utils.js';
 
@@ -14,12 +36,10 @@ class TrackFileLoad extends FileLoad {
 
     async loadPaths(paths) {
 
-        let list = await this.processPaths(paths);
-
         let configurations = [];
 
         // isolate JSON paths
-        let jsonPaths = list.filter(path => 'json' === FileUtils.getExtension(path) );
+        let jsonPaths = paths.filter(path => 'json' === FileUtils.getExtension(path) );
         if (jsonPaths.length > 0) {
             const promises = jsonPaths
                 .map(path => {
@@ -33,7 +53,7 @@ class TrackFileLoad extends FileLoad {
 
         }
 
-        let remainingPaths = list.filter(path => 'json' !== FileUtils.getExtension(path) );
+        let remainingPaths = paths.filter(path => 'json' !== FileUtils.getExtension(path) );
 
         if (remainingPaths.length > 0) {
 

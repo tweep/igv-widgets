@@ -1,6 +1,4 @@
 import * as Utils from './utils.js';
-import {FileUtils} from "../node_modules/igv-utils/src/index.js"
-//import GoogleUtils from "./igvjs/google/googleUtils.js";
 import * as GoogleFilePicker from './googleFilePicker.js';
 import { DOMUtils } from '../node_modules/igv-ui/src/index.js'
 
@@ -47,8 +45,12 @@ class FileLoad {
                 GoogleFilePicker.createDropdownButtonPicker(true, responses => {
 
                     const paths = responses
-                        .map(({ name, url: google_url }) => {
-                            return { filename: name, name, google_url };
+                        .map(({ name, url }) => {
+                            return {
+                                filename: name,
+                                name,
+                                google_url: google.driveDownloadURL(url)
+                            };
                         });
 
                     this.loadPaths(paths);
@@ -62,26 +64,6 @@ class FileLoad {
 
     async loadPaths(paths) {
         console.log('FileLoad: loadPaths(...)');
-    }
-
-    async processPaths(paths) {
-
-        let tmp = [];
-        let googleDrivePaths = [];
-        for (let path of paths) {
-
-            if (FileUtils.isFilePath(path)) {
-                tmp.push(path);
-            } else if (undefined === path.google_url && path.includes('drive.google.com')) {
-                const fileInfo = await google.getDriveFileInfo(path);
-                googleDrivePaths.push({ filename: fileInfo.name, name: fileInfo.name, google_url: path});
-            } else {
-                tmp.push(path);
-            }
-        }
-
-        return tmp.concat(googleDrivePaths);
-
     }
 
     static isValidLocalFileInput(input) {

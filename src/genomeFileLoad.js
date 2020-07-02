@@ -1,10 +1,9 @@
 import FileLoad from "./fileLoad.js";
 import {Alert} from "../node_modules/igv-ui/src/index.js"
-//import igvxhr from "./igvjs/igvxhr.js";
 import {FileUtils} from "../node_modules/igv-utils/src/index.js"
 
 const referenceSet = new Set(['fai', 'fa', 'fasta']);
-const dataSet = new Set(['fa', 'fasta']);
+const dataSet = new Set(['fna', 'fa', 'fasta']);
 const indexSet = new Set(['fai']);
 
 const errorString = 'ERROR: Load either: 1) single XML file 2). single JSON file. 3) data file (.fa or .fasta ) & index file (.fai).';
@@ -18,11 +17,9 @@ class GenomeFileLoad extends FileLoad {
 
     async loadPaths(paths) {
 
-        let list = await this.processPaths(paths);
+        if (1 === paths.length) {
 
-        if (1 === list.length) {
-
-            const path = list[ 0 ];
+            const path = paths[ 0 ];
             if ('json' === FileUtils.getExtension(path)) {
                 const json = await this.igvxhr.loadJson((path.google_url || path));
                 this.loadHandler(json);
@@ -37,9 +34,9 @@ class GenomeFileLoad extends FileLoad {
                 Alert.presentAlert(`${ errorString }`);
             }
 
-        } else if (2 === list.length) {
+        } else if (2 === paths.length) {
 
-            let [ a, b ] = list.map(path => {
+            let [ a, b ] = paths.map(path => {
                 return FileUtils.getExtension(path)
             });
 
@@ -48,7 +45,7 @@ class GenomeFileLoad extends FileLoad {
                 return;
             }
 
-            const [ dataPath, indexPath ] = GenomeFileLoad.retrieveDataPathAndIndexPath(list);
+            const [ dataPath, indexPath ] = GenomeFileLoad.retrieveDataPathAndIndexPath(paths);
 
             await this.loadHandler({ fastaURL: dataPath, indexURL: indexPath });
 
@@ -58,17 +55,23 @@ class GenomeFileLoad extends FileLoad {
 
     };
 
-    static retrieveDataPathAndIndexPath(list) {
+    static retrieveDataPathAndIndexPath(paths) {
 
-        let [ a, b ] = list.map(path => {
-            return FileUtils.getExtension(path)
-        });
+        let [ a, b ] = paths.map(path => FileUtils.getExtension(path))
 
+        const [ la, lb ] = paths;
+
+        let pa;
+        let pb;
         if (dataSet.has(a) && indexSet.has(b)) {
-            return [ list[ 0 ], list[ 1 ] ];
+            pa = la.google_url || la;
+            pb = lb.google_url || lb;
         } else {
-            return [ list[ 1 ], list[ 0 ] ];
+            pa = lb.google_url || lb;
+            pb = la.google_url || la;
         }
+
+        return [ pa, pb ];
 
     };
 

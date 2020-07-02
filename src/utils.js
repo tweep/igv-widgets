@@ -87,27 +87,33 @@ let isJSON = (thang) => {
 };
 
 let configureModal = (fileLoadWidget, modal, okHandler) => {
+
     let dismiss;
 
     // upper dismiss - x - button
     dismiss = modal.querySelector('.modal-header button');
     dismiss.addEventListener('click', () => {
         fileLoadWidget.dismiss();
+        $(modal).modal('hide');
     });
 
     // lower dismiss - close - button
     dismiss = modal.querySelector('.modal-footer button:nth-child(1)');
     dismiss.addEventListener('click', () => {
         fileLoadWidget.dismiss();
+        $(modal).modal('hide');
     });
 
     // ok - button
     const ok = modal.querySelector('.modal-footer button:nth-child(2)');
 
-    ok.addEventListener('click', () => {
+    ok.addEventListener('click', async () => {
 
-        if (true === okHandler(fileLoadWidget)) {
+        const result = await okHandler(fileLoadWidget);
+
+        if (true === result) {
             fileLoadWidget.dismiss();
+            $(modal).modal('hide');
         }
 
     });
@@ -176,4 +182,79 @@ let indexLookup = (dataSuffix) => {
 
 };
 
-export { validIndexExtensionSet, isValidIndexExtension, getIndexObjectWithDataName, isKnownFileExtension, configureModal };
+// TODO: This replaces the above "indexLookup"
+const knownDataFileIndexFileLookup = (extension, isGZippedVCF) => {
+
+    const vcf_gz =
+        {
+            index: 'tbi',
+            isOptional: false
+        };
+
+    const fna =
+        {
+            index: 'fai',
+            isOptional: false
+        };
+
+    const fa =
+        {
+            index: 'fai',
+            isOptional: false
+        };
+
+    const fasta =
+        {
+            index: 'fai',
+            isOptional: false
+        };
+
+    const bam =
+        {
+            index: 'bai',
+            isOptional: false
+        };
+
+    const cram =
+        {
+            index: 'crai',
+            isOptional: false
+        };
+
+    const gz =
+        {
+            index: 'tbi',
+            isOptional: true
+        };
+
+    const bgz =
+        {
+            index: 'tbi',
+            isOptional: true
+        };
+
+    const lut =
+        {
+            vcf_gz,
+            fna,
+            fa,
+            fasta,
+            bam,
+            cram,
+            gz,
+            bgz
+        };
+
+    const any =
+        {
+            index: 'idx',
+            isOptional: true
+        };
+
+    const key = true === isGZippedVCF ? `${ extension }_gz` : extension;
+
+    return lut[ key ] || any;
+
+};
+
+export { knownDataFileIndexFileLookup, validIndexExtensionSet, isValidIndexExtension, getIndexObjectWithDataName, isKnownFileExtension, configureModal };

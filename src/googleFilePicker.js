@@ -21,30 +21,28 @@
  *
  */
 
-// TODO: igvjs dependencies
-import {Alert} from "../node_modules/igv-ui/src/index.js";
+import { Alert } from '../node_modules/igv-ui/src/index.js'
 
-let picker;
-let oauth;
+let appGoogle_picker;
+let appGoogle_oauth;
+let appGoogle_google;
 
-function init(clientId, oa) {
+function init(clientId, oauth, google) {
 
-    oauth = oa;
+    appGoogle_oauth = oauth;
+    appGoogle_google = google;
 
-    let scope,
-        config;
-
-    scope =
+    const scope =
         [
             'https://www.googleapis.com/auth/devstorage.read_only',
             'https://www.googleapis.com/auth/userinfo.profile',
             'https://www.googleapis.com/auth/drive.readonly'
-        ];
+        ].join(' ');
 
-    config =
+    const config =
         {
-            'clientId': clientId,
-            'scope': scope.join(' ')
+            clientId,
+            scope
         };
 
     return gapi.client.init(config)
@@ -79,19 +77,6 @@ function postInit() {
 
 };
 
-const createFilePickerHandler = () => {
-
-    return (multipleFileLoadController, multipleFileSelection) => {
-
-        createDropdownButtonPicker(multipleFileSelection, responses => {
-            const paths = responses.map(({ name, url: google_url }) => { return { filename: name, name, google_url }; });
-            multipleFileLoadController.ingestPaths(paths);
-        });
-
-    };
-
-};
-
 function createDropdownButtonPicker(multipleFileSelection, filePickerHandler) {
 
     getAccessToken()
@@ -114,9 +99,9 @@ function createDropdownButtonPicker(multipleFileSelection, filePickerHandler) {
             if (accessToken) {
 
                 if (multipleFileSelection) {
-                    picker = new google.picker.PickerBuilder()
+                    appGoogle_picker = new google.picker.PickerBuilder()
                         .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
-                        .setOAuthToken(oauth.google.access_token)
+                        .setOAuthToken(appGoogle_oauth.google.access_token)
                         .addView(view)
                         .addView(teamView)
                         .enableFeature(google.picker.Feature.SUPPORT_TEAM_DRIVES)
@@ -128,9 +113,9 @@ function createDropdownButtonPicker(multipleFileSelection, filePickerHandler) {
                         .build();
 
                 } else {
-                    picker = new google.picker.PickerBuilder()
+                    appGoogle_picker = new google.picker.PickerBuilder()
                         .disableFeature(google.picker.Feature.MULTISELECT_ENABLED)
-                        .setOAuthToken(oauth.google.access_token)
+                        .setOAuthToken(appGoogle_oauth.google.access_token)
                         .addView(view)
                         .addView(teamView)
                         .enableFeature(google.picker.Feature.SUPPORT_TEAM_DRIVES)
@@ -143,7 +128,7 @@ function createDropdownButtonPicker(multipleFileSelection, filePickerHandler) {
 
                 }
 
-                picker.setVisible(true);
+                appGoogle_picker.setVisible(true);
 
             } else {
                 Alert.presentAlert("Sign into Google before using picker");
@@ -177,20 +162,18 @@ function signInHandler() {
         .signIn(options)
         .then(function (user) {
 
-            let authResponse;
+            const { access_token } = user.getAuthResponse();
 
-            authResponse = user.getAuthResponse();
+            appGoogle_oauth.setToken(access_token)
 
-            oauth.setToken(authResponse["access_token"]);
-
-            return authResponse["access_token"];
+            return access_token;
         })
 };
 
 function getAccessToken() {
 
-    if (oauth.google.access_token) {
-        return Promise.resolve(oauth.google.access_token);
+    if (appGoogle_oauth.google.access_token) {
+        return Promise.resolve(appGoogle_oauth.google.access_token);
     } else {
         return signInHandler();
     }
@@ -220,4 +203,4 @@ function updateSignInStatus(signInStatus) {
 };
 
 
-export { init, postInit, createDropdownButtonPicker, createFilePickerHandler };
+export { init, postInit, createDropdownButtonPicker, appGoogle_oauth, appGoogle_google };
