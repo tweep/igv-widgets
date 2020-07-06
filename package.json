@@ -26,9 +26,9 @@
   },
   "homepage": "https://github.com/igvteam/igv-widgets#readme",
   "dependencies": {
-    "data-modal": "github:igvteam/data-modal",
-    "igv-ui": "github:igvteam/igv-ui",
-    "igv-utils": "github:igvteam/igv-utils"
+    "data-modal": "github:igvteam/data-modal#0.2.2",
+    "igv-ui": "github:igvteam/igv-ui#0.1.1",
+    "igv-utils": "github:igvteam/igv-utils#0.1.0"
   },
   "devDependencies": {
     "rollup": "^1.32.1"
