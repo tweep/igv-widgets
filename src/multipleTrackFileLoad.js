@@ -69,22 +69,19 @@ class MultipleTrackFileLoad {
 
                 GoogleFilePicker.createDropdownButtonPicker(multipleFileSelection, async responses => {
 
-                    const obj = responses.map(({ name, url }) => {
+                    const paths = responses.map(({ name, url }) => {
 
                         return {
                             url: google.driveDownloadURL(url),
-
-                            // TODO: NOT NEEDED! Used only for compatibility with FileUtils.getExtension()
                             google_url: google.driveDownloadURL(url),
-
                             name,
                             filename: name,
                             format: TrackUtils.inferFileFormat(name)
-                        };
+                        }
 
                     });
 
-                    await ingestPaths({ paths: obj, fileLoadHandler, google, igvxhr });
+                    await ingestPaths({ paths, fileLoadHandler, google, igvxhr });
                 });
 
             });
@@ -110,8 +107,17 @@ const ingestPaths = async ({ paths, fileLoadHandler, google, igvxhr }) => {
     if (remainingPaths) {
 
         const LUT = {};
+
         for (let path of remainingPaths) {
-            const name = getFilenameComprehensive(path);
+
+            let name
+            if (Utils.isGoogleDriveComprehensive(path, google)) {
+                const { name:n } = await google.getDriveFileInfo(path)
+                name = n;
+            } else {
+                name = getFilenameComprehensive(path);
+            }
+
             LUT[ name ] = path;
         }
 
@@ -138,6 +144,8 @@ const ingestPaths = async ({ paths, fileLoadHandler, google, igvxhr }) => {
                 Alert.presentAlert(errorStrings.join('\n'))
             }
 
+        } else {
+            Alert.presentAlert('ERROR: Only index files were selected. The corresponding data files must also be selected.')
         }
 
     } else {
@@ -191,17 +199,18 @@ const createDataFilePathLUT = (LUT, google) => {
             let format = undefined;
 
             if (path instanceof File) {
-
                 const { name } = path;
                 format = TrackUtils.inferFileFormat( name );
 
-            } else if ('object' === typeof path) {
+            } else if (path.google_url) {
 
                 const { name, url } = path;
-                if (google.isGoogleURL(url)) {
+                if (google.isGoogleDrive(url)) {
                     format = TrackUtils.inferFileFormat( name );
                 }
 
+            } else if (google.isGoogleDrive(path)) {
+                format = TrackUtils.inferFileFormat( key );
             } else {
                 format = TrackUtils.inferFileFormat( getFilenameComprehensive(path) );
             }
@@ -209,7 +218,7 @@ const createDataFilePathLUT = (LUT, google) => {
             if (undefined !== format) {
                 result[ key ] = path;
             } else {
-                result[ key ] = { errorString: `Error: Unrecognizedfile format ${ key }`}
+                result[ key ] = { errorString: `Error: Unrecognized file format ${ key }`}
             }
 
         }
@@ -244,13 +253,22 @@ const createTrackConfigurationLUT = (dataFileLUT, google) => {
 
             TrackUtils.inferTrackTypes(config);
 
-        } else if ('object' === typeof path) {
+        } else if (path.google_url) {
 
             const { url } = path;
 
-            if (google.isGoogleURL(url)) {
+            if (google.isGoogleDrive(url)) {
                 config = path;
             }
+
+        } else if (google.isGoogleDrive(path)) {
+
+            config =
+                {
+                    url: path,
+                    name: key,
+                    filename: key
+                };
 
         } else {
 
@@ -323,8 +341,8 @@ const validateTrackConfigurations = trackConfigurationLUT => {
 
 const getFilenameComprehensive = path => {
 
-    if (path instanceof File || 'object' === typeof path) {
-        const { name } = path;
+    if (path instanceof File || path.google_url) {
+        const {name} = path;
         return name;
     } else {
         return FileUtils.getFilename(path);
