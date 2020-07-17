@@ -1,6 +1,6 @@
-import * as Utils from './utils.js';
-import * as GoogleFilePicker from './googleFilePicker.js';
 import { DOMUtils } from '../node_modules/igv-ui/src/index.js'
+import * as Utils from './utils.js'
+import * as GoogleFilePicker from './googleFilePicker.js'
 
 class FileLoad {
 

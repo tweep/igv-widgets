@@ -1,4 +1,3 @@
-import { Alert } from "../node_modules/igv-ui/src/index.js";
 import EventBus from "./eventBus.js";
 import { QRCode } from './qrcode.js';
 import FileLoadManager from './fileLoadManager.js';
@@ -13,9 +12,12 @@ import * as GoogleFilePicker from './googleFilePicker.js';
 import * as Utils from './utils.js';
 import { createSessionWidgets } from "./sessionWidgets.js";
 import { createTrackWidgets, createTrackWidgetsWithTrackRegistry } from './trackWidgets.js'
+import { createURLModal } from "./urlModal.js";
+import { dropboxButtonImageBase64, googleDriveButtonImageBase64, dropboxDropdownItem, googleDriveDropdownItem } from './markupFactory.js'
+import { createGenericSelectModal } from './genericSelectModal.js'
+import { createTrackURLModal } from './trackURLModal.js'
 
 export {
-    Alert,
     EventBus,
     QRCode,
     GoogleFilePicker,
@@ -30,5 +32,12 @@ export {
     MultipleTrackFileLoad,
     createSessionWidgets,
     createTrackWidgets,
-    createTrackWidgetsWithTrackRegistry
+    createTrackWidgetsWithTrackRegistry,
+    createURLModal,
+    dropboxButtonImageBase64,
+    googleDriveButtonImageBase64,
+    dropboxDropdownItem,
+    googleDriveDropdownItem,
+    createGenericSelectModal,
+    createTrackURLModal
 }

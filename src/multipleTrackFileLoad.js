@@ -22,9 +22,9 @@
  */
 
 import { Alert } from "../node_modules/igv-ui/src/index.js"
+import { FileUtils, TrackUtils } from "../node_modules/igv-utils/src/index.js"
 import * as Utils from './utils.js';
 import * as GoogleFilePicker from './googleFilePicker.js';
-import { FileUtils, TrackUtils } from "../node_modules/igv-utils/src/index.js"
 
 class MultipleTrackFileLoad {
 
