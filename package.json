@@ -3,8 +3,12 @@
   "version": "1.0.0",
   "description": "Various UI modules to support igvteam web apps",
   "files": [
-    "src/**"
+    "dist/**"
   ],
+  "scripts": {
+    "build": "npx rollup --config",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/igvteam/igv-widgets.git"
