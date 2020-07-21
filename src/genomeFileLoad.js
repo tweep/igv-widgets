@@ -1,6 +1,6 @@
-import { Alert } from "../node_modules/igv-ui/src/index.js"
 import {FileUtils} from "../node_modules/igv-utils/src/index.js"
 import FileLoad from "./fileLoad.js"
+import Alert from './alert.js'
 
 const referenceSet = new Set(['fai', 'fa', 'fasta']);
 const dataSet = new Set(['fna', 'fa', 'fasta']);

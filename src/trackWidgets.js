@@ -1,4 +1,3 @@
-import { Alert } from '../node_modules/igv-ui/src/index.js'
 import ModalTable from '../node_modules/data-modal/js/modalTable.js'
 import EncodeTrackDatasource from "../node_modules/data-modal/js/encodeTrackDatasource.js"
 import { encodeTrackDatasourceConfigurator } from '../node_modules/data-modal/js/encodeTrackDatasourceConfig.js'
@@ -11,6 +10,7 @@ import FileLoadManager from "./fileLoadManager.js"
 import FileLoadWidget from "./fileLoadWidget.js"
 import MultipleTrackFileLoad from "./multipleTrackFileLoad.js"
 import * as Utils from './utils.js'
+import Alert from './alert.js'
 
 
 let fileLoadWidget;

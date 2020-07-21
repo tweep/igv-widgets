@@ -21,10 +21,10 @@
  *
  */
 
-import { Alert } from "../node_modules/igv-ui/src/index.js"
 import { FileUtils, TrackUtils } from "../node_modules/igv-utils/src/index.js"
 import FileLoad from "./fileLoad.js"
 import * as Utils from './utils.js'
+import Alert from './alert.js'
 
 const indexableFormats = new Set(["vcf", "bed", "gff", "gtf", "gff3", "bedgraph"]);
 
