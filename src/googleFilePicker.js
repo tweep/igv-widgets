@@ -21,7 +21,7 @@
  *
  */
 
-import { Alert } from '../node_modules/igv-ui/src/index.js'
+import Alert from './alert.js'
 
 let appGoogle_picker;
 let appGoogle_oauth;

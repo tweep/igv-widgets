@@ -1,6 +1,9 @@
-import { Utils, FileLoadManager, FileLoadWidget, SessionFileLoad } from './index.js';
-import { FileUtils, IGVUtils } from '../node_modules/igv-utils/src/index.js';
-import { createURLModal } from '../node_modules/igv-ui/src/index.js';
+import { FileUtils, IGVUtils } from '../node_modules/igv-utils/src/index.js'
+import FileLoadManager from './fileLoadManager.js'
+import FileLoadWidget from './fileLoadWidget.js'
+import SessionFileLoad from "./sessionFileLoad.js"
+import { createURLModal } from './urlModal.js'
+import * as Utils from './utils.js'
 
 let fileLoadWidget;
 

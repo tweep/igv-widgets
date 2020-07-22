@@ -24,7 +24,7 @@
  * THE SOFTWARE.
  */
 
-import { DOMUtils, UIUtils } from '../node_modules/igv-ui/src/index.js';
+import { DOMUtils, UIUtils } from '../node_modules/igv-utils/src/index.js';
 
 class FileLoadWidget {
 
