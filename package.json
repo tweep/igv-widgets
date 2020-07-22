@@ -1,6 +1,6 @@
 {
   "name": "igv-widgets",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Various UI modules to support igvteam web apps",
   "files": [
     "dist/**"
@@ -24,7 +24,7 @@
   },
   "homepage": "https://github.com/igvteam/igv-widgets#readme",
   "dependencies": {
-    "data-modal": "github:igvteam/data-modal",
-    "igv-utils": "github:igvteam/igv-utils"
+    "data-modal": "github:igvteam/data-modal#v1.0.0",
+    "igv-utils": "github:igvteam/igv-utils#v1.0.0"
   }
 }
