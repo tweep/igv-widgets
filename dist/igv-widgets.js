@@ -7406,26 +7406,12 @@ let isKnownFileExtension = (extension) => {
 
 let configureModal = (fileLoadWidget, modal, okHandler) => {
 
-    let dismiss;
-
-    // upper dismiss - x - button
-    dismiss = modal.querySelector('.modal-header button');
-    dismiss.addEventListener('click', () => {
+    const doDismiss = () => {
         fileLoadWidget.dismiss();
         $(modal).modal('hide');
-    });
+    };
 
-    // lower dismiss - close - button
-    dismiss = modal.querySelector('.modal-footer button:nth-child(1)');
-    dismiss.addEventListener('click', () => {
-        fileLoadWidget.dismiss();
-        $(modal).modal('hide');
-    });
-
-    // ok - button
-    const ok = modal.querySelector('.modal-footer button:nth-child(2)');
-
-    ok.addEventListener('click', async () => {
+    const doOK = async () => {
 
         const result = await okHandler(fileLoadWidget);
 
@@ -7433,9 +7419,28 @@ let configureModal = (fileLoadWidget, modal, okHandler) => {
             fileLoadWidget.dismiss();
             $(modal).modal('hide');
         }
+    };
 
+    let dismiss;
+
+    // upper dismiss - x - button
+    dismiss = modal.querySelector('.modal-header button');
+    dismiss.addEventListener('click', doDismiss);
+
+    // lower dismiss - close - button
+    dismiss = modal.querySelector('.modal-footer button:nth-child(1)');
+    dismiss.addEventListener('click', doDismiss);
+
+    // ok - button
+    const ok = modal.querySelector('.modal-footer button:nth-child(2)');
+
+    ok.addEventListener('click', doOK);
+
+    modal.addEventListener('keypress', event => {
+        if ('Enter' === event.key) {
+            doOK();
+        }
     });
-
 };
 
 let indexLookup = (dataSuffix) => {
@@ -9698,7 +9703,8 @@ const createTrackWidgetsWithTrackRegistry = ($igvMain, $dropdownMenu, $localFile
     $dismiss.on('click', () => $genericSelectModal.modal('hide'));
 
     const $ok = $genericSelectModal.find('.modal-footer button:nth-child(2)');
-    $ok.on('click', () => {
+
+    const okHandler = () => {
 
         const configurations = [];
         const $selectedOptions = $select.find('option:selected');
@@ -9713,6 +9719,15 @@ const createTrackWidgetsWithTrackRegistry = ($igvMain, $dropdownMenu, $localFile
         }
 
         $genericSelectModal.modal('hide');
+
+    };
+
+    $ok.on('click', okHandler);
+
+    $genericSelectModal.get(0).addEventListener('keypress', event => {
+        if ('Enter' === event.key) {
+            okHandler();
+        }
     });
 
     genomeChangeListener = {
