@@ -14,7 +14,7 @@ class AlertDialog {
         // container
         this.container = DOMUtils.div({class: "igv-widgets-alert-dialog-container"});
         parent.appendChild(this.container);
-        this.container.setAttribute('tabIndex', '0')
+        this.container.setAttribute('tabIndex', '-1')
 
         // header
         let header = DOMUtils.div();
