@@ -9754,9 +9754,17 @@ const createTrackWidgetsWithTrackRegistry = ($igvMain, $dropdownMenu, $localFile
 
         receiveEvent: async ({ data }) => {
             const { genomeID } = data;
-            encodeModalTables[ 0 ].setDatasource(new EncodeTrackDatasource(encodeTrackDatasourceSignalConfigurator(genomeID)));
-            encodeModalTables[ 1 ].setDatasource(new EncodeTrackDatasource(encodeTrackDatasourceOtherConfigurator(genomeID)));
-            await updateTrackMenus(genomeID, GtexUtils, encodeModalTables, trackRegistryFile, $dropdownMenu, $genericSelectModal);
+
+            const encodeIsSupported = EncodeTrackDatasource.supportsGenome(genomeID);
+            if (encodeIsSupported) {
+                console.log(`ENCODE supports genome ${ genomeID }`);
+                encodeModalTables[ 0 ].setDatasource(new EncodeTrackDatasource(encodeTrackDatasourceSignalConfigurator(genomeID)));
+                encodeModalTables[ 1 ].setDatasource(new EncodeTrackDatasource(encodeTrackDatasourceOtherConfigurator(genomeID)));
+            } else {
+                console.log(`ENCODE DOES NOT support genome ${ genomeID }`);
+            }
+
+            await updateTrackMenus(genomeID, GtexUtils, encodeIsSupported, encodeModalTables, trackRegistryFile, $dropdownMenu, $genericSelectModal);
         }
     };
 
@@ -9764,7 +9772,7 @@ const createTrackWidgetsWithTrackRegistry = ($igvMain, $dropdownMenu, $localFile
 
 };
 
-const updateTrackMenus = async (genomeID, GtexUtils, encodeModalTables, trackRegistryFile, $dropdownMenu, $genericSelectModal) => {
+const updateTrackMenus = async (genomeID, GtexUtils, encodeIsSupported, encodeModalTables, trackRegistryFile, $dropdownMenu, $genericSelectModal) => {
 
     const id_prefix = 'genome_specific_';
 
@@ -9833,11 +9841,15 @@ const updateTrackMenus = async (genomeID, GtexUtils, encodeModalTables, trackReg
         }
     }
 
-    createDropdownButton($divider, 'ENCODE Other',   id_prefix)
-        .on('click', () => encodeModalTables[ 1 ].$modal.modal('show'));
+    if (encodeIsSupported) {
 
-    createDropdownButton($divider, 'ENCODE Signals', id_prefix)
-        .on('click', () => encodeModalTables[ 0 ].$modal.modal('show'));
+        createDropdownButton($divider, 'ENCODE Other',   id_prefix)
+            .on('click', () => encodeModalTables[ 1 ].$modal.modal('show'));
+
+        createDropdownButton($divider, 'ENCODE Signals', id_prefix)
+            .on('click', () => encodeModalTables[ 0 ].$modal.modal('show'));
+
+    }
 
     for (let config of configurations) {
 
