@@ -5800,6 +5800,121 @@ if (typeof process === 'object' && typeof window === 'undefined') {
     };
 }
 
+const FIVE_MINUTES = 5 * 60 * 1000;
+
+
+async function getAccessToken(scope) {
+
+    let currentUser = gapi.auth2.getAuthInstance().currentUser.get();
+    if (currentUser.isSignedIn()) {
+        if (currentUser.hasGrantedScopes(scope)) {
+            const {access_token, expires_at} = currentUser.getAuthResponse();
+            if ((Date.now() - FIVE_MINUTES) < expires_at) {
+                return access_token;
+            } else {
+                // reloadAuthResponse should work but doesn't reliably.  Force another sign-in as a workaround
+                // const reloadResponse = await currentUser.reloadAuthResponse();
+                // return reloadResponse.access_token;
+                currentUser = await signIn(scope);
+                const {access_token} = currentUser.getAuthResponse();
+                return access_token;
+            }
+        } else {
+            const {access_token} = currentUser.grant({scope});
+            return access_token;
+        }
+    } else {
+        currentUser = await signIn(scope);
+        const {access_token} = currentUser.getAuthResponse();
+        return access_token;
+    }
+}
+
+async function signIn(scope) {
+
+    const options = new gapi.auth2.SigninOptionsBuilder();
+    options.setPrompt('select_account');
+    options.setScope(scope);
+    return gapi.auth2.getAuthInstance().signIn(options)
+}
+
+/*
+ *  Author: Jim Robinson, 2020
+ *
+ * Wrapper functions for the Google picker API
+ *
+ * PREQUISITES
+ *    gapi loaded
+ *    oauth2 loaded and initialized
+ */
+
+let pickerAPILoaded = false;
+
+async function init() {
+    return new Promise(function (resolve, reject) {
+        gapi.load("picker", {
+            callback: function(result) {
+                pickerAPILoaded = true;
+                resolve(result);
+            },
+            onerror: reject});
+    })
+}
+
+async function createDropdownButtonPicker(multipleFileSelection, filePickerHandler) {
+
+    if(!pickerAPILoaded) {
+        await init();
+    }
+
+    const accessToken = await getAccessToken('https://www.googleapis.com/auth/drive.readonly');
+    if (accessToken) {
+
+        const view = new google.picker.DocsView(google.picker.ViewId.DOCS);
+        view.setIncludeFolders(true);
+
+        const teamView = new google.picker.DocsView(google.picker.ViewId.DOCS);
+        teamView.setEnableTeamDrives(true);
+        teamView.setIncludeFolders(true);
+
+        let picker;
+        if (multipleFileSelection) {
+             picker = new google.picker.PickerBuilder()
+                .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
+                .setOAuthToken(accessToken)
+                .addView(view)
+                .addView(teamView)
+                .enableFeature(google.picker.Feature.SUPPORT_TEAM_DRIVES)
+                .setCallback(function (data) {
+                    if (data[google.picker.Response.ACTION] === google.picker.Action.PICKED) {
+                        filePickerHandler(data[google.picker.Response.DOCUMENTS]);
+                    }
+                })
+                .build();
+
+        } else {
+             picker = new google.picker.PickerBuilder()
+                .disableFeature(google.picker.Feature.MULTISELECT_ENABLED)
+                .setOAuthToken(access_token)
+                .addView(view)
+                .addView(teamView)
+                .enableFeature(google.picker.Feature.SUPPORT_TEAM_DRIVES)
+                .setCallback(function (data) {
+                    if (data[google.picker.Response.ACTION] === google.picker.Action.PICKED) {
+                        filePickerHandler(data[google.picker.Response.DOCUMENTS]);
+                    }
+                })
+                .build();
+
+        }
+
+        picker.setVisible(true);
+
+    } else {
+        throw Error("Sign into Google before using picker");
+    }
+}
+
 /**
  * Make the target element movable by clicking and dragging on the handle.  This is not a general purprose function,
  * it makes several options specific to igv dialogs, the primary one being that the
@@ -7638,193 +7753,6 @@ var utils = /*#__PURE__*/Object.freeze({
     isKnownFileExtension: isKnownFileExtension,
     configureModal: configureModal,
     isGoogleDriveComprehensive: isGoogleDriveComprehensive
-});
-
-/*
- *  The MIT License (MIT)
- *
- * Copyright (c) 2016-2017 The Regents of the University of California
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
- * associated documentation files (the "Software"), to deal in the Software without restriction, including
- * without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the
- * following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all copies or substantial
- * portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
- * BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,  FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
- * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
- * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- *
- */
-
-let appGoogle_picker;
-let appGoogle_oauth;
-let appGoogle_google;
-
-function init(clientId, oauth, google) {
-
-    appGoogle_oauth = oauth;
-    appGoogle_google = google;
-
-    const scope =
-        [
-            'https://www.googleapis.com/auth/devstorage.read_only',
-            'https://www.googleapis.com/auth/userinfo.profile',
-            'https://www.googleapis.com/auth/drive.readonly'
-        ].join(' ');
-
-    const config =
-        {
-            clientId,
-            scope
-        };
-
-    return gapi.client.init(config)
-}
-
-function postInit() {
-    let callback,
-        onerror,
-        config;
-
-    gapi.auth2
-        .getAuthInstance()
-        .isSignedIn
-        .listen(updateSignInStatus);
-
-    callback = () => {
-        console.log('Google Picker library loaded successfully');
-    };
-
-    onerror = () => {
-        console.log('Error loading Google Picker library');
-        alert('Error loading Google Picker library');
-    };
-
-    config =
-        {
-            callback: callback,
-            onerror: onerror
-        };
-
-    gapi.load('picker', config);
-
-}
-function createDropdownButtonPicker(multipleFileSelection, filePickerHandler) {
-
-    getAccessToken()
-        .then(function (accessToken) {
-            return accessToken;
-        })
-        .then(function (accessToken) {
-
-            let view,
-                teamView;
-
-            view = new google.picker.DocsView(google.picker.ViewId.DOCS);
-            view.setIncludeFolders(true);
-
-            teamView = new google.picker.DocsView(google.picker.ViewId.DOCS);
-            teamView.setEnableTeamDrives(true);
-            teamView.setIncludeFolders(true);
-
-            if (accessToken) {
-
-                if (multipleFileSelection) {
-                    appGoogle_picker = new google.picker.PickerBuilder()
-                        .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
-                        .setOAuthToken(appGoogle_oauth.google.access_token)
-                        .addView(view)
-                        .addView(teamView)
-                        .enableFeature(google.picker.Feature.SUPPORT_TEAM_DRIVES)
-                        .setCallback(function (data) {
-                            if (data[google.picker.Response.ACTION] === google.picker.Action.PICKED) {
-                                filePickerHandler(data[google.picker.Response.DOCUMENTS]);
-                            }
-                        })
-                        .build();
-
-                } else {
-                    appGoogle_picker = new google.picker.PickerBuilder()
-                        .disableFeature(google.picker.Feature.MULTISELECT_ENABLED)
-                        .setOAuthToken(appGoogle_oauth.google.access_token)
-                        .addView(view)
-                        .addView(teamView)
-                        .enableFeature(google.picker.Feature.SUPPORT_TEAM_DRIVES)
-                        .setCallback(function (data) {
-                            if (data[google.picker.Response.ACTION] === google.picker.Action.PICKED) {
-                                filePickerHandler(data[google.picker.Response.DOCUMENTS]);
-                            }
-                        })
-                        .build();
-
-                }
-
-                appGoogle_picker.setVisible(true);
-
-            } else {
-                AlertSingleton$1.present("Sign into Google before using picker");
-            }
-        })
-        .catch(function (error) {
-            console.log(error);
-        });
-
-
-}
-function signInHandler() {
-
-    let scope,
-        options;
-
-    scope =
-        [
-            'https://www.googleapis.com/auth/devstorage.read_only',
-            'https://www.googleapis.com/auth/userinfo.profile',
-            'https://www.googleapis.com/auth/drive.readonly'
-        ];
-
-    options = new gapi.auth2.SigninOptionsBuilder();
-    options.setPrompt('select_account');
-    options.setScope(scope.join(' '));
-
-    return gapi.auth2
-        .getAuthInstance()
-        .signIn(options)
-        .then(function (user) {
-
-            const { access_token } = user.getAuthResponse();
-
-            appGoogle_oauth.setToken(access_token);
-
-            return access_token;
-        })
-}
-function getAccessToken() {
-
-    if (appGoogle_oauth.google.access_token) {
-        return Promise.resolve(appGoogle_oauth.google.access_token);
-    } else {
-        return signInHandler();
-    }
-}
-function updateSignInStatus(signInStatus) {
-    // do nothing
-}
-
-var googleFilePicker = /*#__PURE__*/Object.freeze({
-    __proto__: null,
-    init: init,
-    postInit: postInit,
-    createDropdownButtonPicker: createDropdownButtonPicker,
-    get appGoogle_oauth () { return appGoogle_oauth; },
-    get appGoogle_google () { return appGoogle_google; }
 });
 
 class FileLoad {
@@ -9996,4 +9924,4 @@ const googleDriveDropdownItem = id => {
             </div>`
 };
 
-export { AlertSingleton$1 as AlertSingleton, EventBus, FileLoad, FileLoadManager, FileLoadWidget, GenomeFileLoad, googleFilePicker as GoogleFilePicker, MultipleTrackFileLoad, QRCode, SessionController, SessionFileLoad, TrackFileLoad, utils as Utils, createGenericSelectModal, createSessionWidgets, createTrackURLModal, createTrackWidgets, createTrackWidgetsWithTrackRegistry, createURLModal, dropboxButtonImageBase64, dropboxDropdownItem, googleDriveButtonImageBase64, googleDriveDropdownItem };
+export { AlertSingleton$1 as AlertSingleton, EventBus, FileLoad, FileLoadManager, FileLoadWidget, GenomeFileLoad, MultipleTrackFileLoad, QRCode, SessionController, SessionFileLoad, TrackFileLoad, utils as Utils, createGenericSelectModal, createSessionWidgets, createTrackURLModal, createTrackWidgets, createTrackWidgetsWithTrackRegistry, createURLModal, dropboxButtonImageBase64, dropboxDropdownItem, googleDriveButtonImageBase64, googleDriveDropdownItem };

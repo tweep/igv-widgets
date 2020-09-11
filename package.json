@@ -4,7 +4,7 @@
   "description": "Various UI modules to support igvteam web apps",
   "files": [
     "dist/**",
-    "css/**"
+    "src/**"
   ],
   "scripts": {
     "build": "npx rollup --config",
@@ -26,6 +26,6 @@
   "homepage": "https://github.com/igvteam/igv-widgets#readme",
   "dependencies": {
     "data-modal": "github:igvteam/data-modal#v1.0.0",
-    "igv-utils": "github:igvteam/igv-utils#v1.0.0"
+    "igv-utils": "github:igvteam/igv-utils#0756ca27"
   }
 }
