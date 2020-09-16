@@ -21,7 +21,7 @@
  *
  */
 
-import {FileUtils} from "../node_modules/igv-utils/src/index.js"
+import {FileUtils, GoogleUtils} from "../node_modules/igv-utils/src/index.js"
 
 let validIndexExtensionSet = new Set(['fai', 'bai', 'crai', 'tbi', 'idx']);
 
@@ -187,8 +187,8 @@ function indexLookup  (dataSuffix)  {
 
 };
 
-function isGoogleDriveComprehensive  (path, google)  {
-    return !(path instanceof File) && !(path.google_url) && google.isGoogleDrive(path)
+function isGoogleDriveComprehensive  (path)  {
+    return !(path instanceof File) && !(path.google_url) && GoogleUtils.isGoogleDriveURL(path)
 }
 
 // TODO: This replaces the above "indexLookup"

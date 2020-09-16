@@ -1,10 +1,9 @@
 import ModalTable from '../node_modules/data-modal/js/modalTable.js'
 import EncodeTrackDatasource from "../node_modules/data-modal/js/encodeTrackDatasource.js"
-import { encodeTrackDatasourceConfigurator } from '../node_modules/data-modal/js/encodeTrackDatasourceConfig.js'
-import { encodeTrackDatasourceSignalConfigurator } from "../node_modules/data-modal/js/encodeTrackDatasourceSignalConfig.js"
-import { encodeTrackDatasourceOtherConfigurator } from "../node_modules/data-modal/js/encodeTrackDatasourceOtherConfig.js"
-import { createGenericSelectModal } from './genericSelectModal.js'
-import { createTrackURLModal } from './trackURLModal.js'
+import {encodeTrackDatasourceSignalConfigurator} from "../node_modules/data-modal/js/encodeTrackDatasourceSignalConfig.js"
+import {encodeTrackDatasourceOtherConfigurator} from "../node_modules/data-modal/js/encodeTrackDatasourceOtherConfig.js"
+import {createGenericSelectModal} from './genericSelectModal.js'
+import {createTrackURLModal} from './trackURLModal.js'
 import EventBus from "./eventBus.js"
 import FileLoadManager from "./fileLoadManager.js"
 import FileLoadWidget from "./fileLoadWidget.js"
@@ -17,7 +16,16 @@ let fileLoadWidget;
 let multipleTrackFileLoad;
 let encodeModalTables = [];
 let genomeChangeListener
-const createTrackWidgets = ($igvMain, $localFileInput, $dropboxButton, googleEnabled, $googleDriveButton, encodeTrackModalIds, urlModalId, igvxhr, google, trackLoadHandler) => {
+
+function createTrackWidgets($igvMain,
+                            $localFileInput,
+                            $dropboxButton,
+                            googleEnabled,
+                            $googleDriveButton,
+                            encodeTrackModalIds,
+                            urlModalId,
+                            igvxhr,
+                            trackLoadHandler) {
 
     const $urlModal = $(createTrackURLModal(urlModalId))
     $igvMain.append($urlModal);
@@ -37,7 +45,7 @@ const createTrackWidgets = ($igvMain, $localFileInput, $dropboxButton, googleEna
 
     Utils.configureModal(fileLoadWidget, $urlModal.get(0), async fileLoadWidget => {
         const paths = fileLoadWidget.retrievePaths();
-        await multipleTrackFileLoad.loadPaths( paths );
+        await multipleTrackFileLoad.loadPaths(paths);
         return true;
     });
 
@@ -52,8 +60,7 @@ const createTrackWidgets = ($igvMain, $localFileInput, $dropboxButton, googleEna
             $googleDriveButton: googleEnabled ? $googleDriveButton : undefined,
             fileLoadHandler: trackLoadHandler,
             multipleFileSelection: true,
-            igvxhr,
-            google
+            igvxhr
         };
 
     multipleTrackFileLoad = new MultipleTrackFileLoad(multipleTrackFileLoadConfig)
@@ -69,16 +76,16 @@ const createTrackWidgets = ($igvMain, $localFileInput, $dropboxButton, googleEna
                 selectHandler: trackLoadHandler
             }
 
-        encodeModalTables.push( new ModalTable(encodeModalTableConfig) )
+        encodeModalTables.push(new ModalTable(encodeModalTableConfig))
 
     }
 
     genomeChangeListener = {
 
-        receiveEvent: async ({ data }) => {
-            const { genomeID } = data;
-            encodeModalTables[ 0 ].setDatasource(new EncodeTrackDatasource(encodeTrackDatasourceSignalConfigurator(genomeID)))
-            encodeModalTables[ 1 ].setDatasource(new EncodeTrackDatasource(encodeTrackDatasourceOtherConfigurator(genomeID)))
+        receiveEvent: async ({data}) => {
+            const {genomeID} = data;
+            encodeModalTables[0].setDatasource(new EncodeTrackDatasource(encodeTrackDatasourceSignalConfigurator(genomeID)))
+            encodeModalTables[1].setDatasource(new EncodeTrackDatasource(encodeTrackDatasourceOtherConfigurator(genomeID)))
         }
     }
 
@@ -86,11 +93,23 @@ const createTrackWidgets = ($igvMain, $localFileInput, $dropboxButton, googleEna
 
 }
 
-const createTrackWidgetsWithTrackRegistry = ($igvMain, $dropdownMenu, $localFileInput, $dropboxButton, googleEnabled, $googleDriveButton, encodeTrackModalIds, urlModalId, selectModalId, igvxhr, google, GtexUtils, trackRegistryFile, trackLoadHandler) => {
+function createTrackWidgetsWithTrackRegistry($igvMain,
+                                             $dropdownMenu,
+                                             $localFileInput,
+                                             $dropboxButton,
+                                             googleEnabled,
+                                             $googleDriveButton,
+                                             encodeTrackModalIds,
+                                             urlModalId,
+                                             selectModalId,
+                                             igvxhr,
+                                             GtexUtils,
+                                             trackRegistryFile,
+                                             trackLoadHandler) {
 
-    createTrackWidgets($igvMain, $localFileInput, $dropboxButton, googleEnabled, $googleDriveButton, encodeTrackModalIds, urlModalId, igvxhr, google, trackLoadHandler)
+    createTrackWidgets($igvMain, $localFileInput, $dropboxButton, googleEnabled, $googleDriveButton, encodeTrackModalIds, urlModalId, igvxhr, trackLoadHandler)
 
-    const $genericSelectModal = $(createGenericSelectModal(selectModalId, `${ selectModalId }-select`));
+    const $genericSelectModal = $(createGenericSelectModal(selectModalId, `${selectModalId}-select`));
     $igvMain.append($genericSelectModal);
 
     const $select = $genericSelectModal.find('select');
@@ -104,9 +123,9 @@ const createTrackWidgetsWithTrackRegistry = ($igvMain, $dropdownMenu, $localFile
 
         const configurations = []
         const $selectedOptions = $select.find('option:selected')
-        $selectedOptions.each(function() {
-            console.log(`You selected ${ $(this).val() }`);
-            configurations.push( $(this).data('track') )
+        $selectedOptions.each(function () {
+            //console.log(`You selected ${$(this).val()}`);
+            configurations.push($(this).data('track'))
             $(this).removeAttr('selected');
         });
 
@@ -128,16 +147,16 @@ const createTrackWidgetsWithTrackRegistry = ($igvMain, $dropdownMenu, $localFile
 
     genomeChangeListener = {
 
-        receiveEvent: async ({ data }) => {
-            const { genomeID } = data;
+        receiveEvent: async ({data}) => {
+            const {genomeID} = data;
 
             const encodeIsSupported = EncodeTrackDatasource.supportsGenome(genomeID)
             if (encodeIsSupported) {
-                console.log(`ENCODE supports genome ${ genomeID }`)
-                encodeModalTables[ 0 ].setDatasource(new EncodeTrackDatasource(encodeTrackDatasourceSignalConfigurator(genomeID)))
-                encodeModalTables[ 1 ].setDatasource(new EncodeTrackDatasource(encodeTrackDatasourceOtherConfigurator(genomeID)))
+                //console.log(`ENCODE supports genome ${genomeID}`)
+                encodeModalTables[0].setDatasource(new EncodeTrackDatasource(encodeTrackDatasourceSignalConfigurator(genomeID)))
+                encodeModalTables[1].setDatasource(new EncodeTrackDatasource(encodeTrackDatasourceOtherConfigurator(genomeID)))
             } else {
-                console.log(`ENCODE DOES NOT support genome ${ genomeID }`)
+                //console.log(`ENCODE DOES NOT support genome ${genomeID}`)
             }
 
             await updateTrackMenus(genomeID, GtexUtils, encodeIsSupported, encodeModalTables, trackRegistryFile, $dropdownMenu, $genericSelectModal);
@@ -148,7 +167,13 @@ const createTrackWidgetsWithTrackRegistry = ($igvMain, $dropdownMenu, $localFile
 
 }
 
-const updateTrackMenus = async (genomeID, GtexUtils, encodeIsSupported, encodeModalTables, trackRegistryFile, $dropdownMenu, $genericSelectModal) => {
+async function updateTrackMenus(genomeID,
+                                GtexUtils,
+                                encodeIsSupported,
+                                encodeModalTables,
+                                trackRegistryFile,
+                                $dropdownMenu,
+                                $genericSelectModal) {
 
     const id_prefix = 'genome_specific_';
 
@@ -161,20 +186,20 @@ const updateTrackMenus = async (genomeID, GtexUtils, encodeIsSupported, encodeMo
     const paths = await getPathsWithTrackRegistryFile(genomeID, trackRegistryFile);
 
     if (undefined === paths) {
-        console.warn(`There are no tracks in the track registryy for genome ${ genomeID }`);
+        console.warn(`There are no tracks in the track registryy for genome ${genomeID}`);
         return;
     }
 
     let responses = [];
     try {
-        responses = await Promise.all( paths.map( path => fetch(path) ) )
+        responses = await Promise.all(paths.map(path => fetch(path)))
     } catch (e) {
         AlertSingleton.present(e.message);
     }
 
     let jsons = [];
     try {
-        jsons = await Promise.all( responses.map( response => response.json() ) )
+        jsons = await Promise.all(responses.map(response => response.json()))
     } catch (e) {
         AlertSingleton.present(e.message);
     }
@@ -186,8 +211,8 @@ const updateTrackMenus = async (genomeID, GtexUtils, encodeIsSupported, encodeMo
         if ('ENCODE' === json.type) {
 
             let i = 0;
-            for (let config of [ encodeTrackDatasourceSignalConfigurator(genomeID), encodeTrackDatasourceOtherConfigurator(json.genomeID) ]) {
-                encodeModalTables[ i++ ].setDatasource( new EncodeTrackDatasource(config) )
+            for (let config of [encodeTrackDatasourceSignalConfigurator(genomeID), encodeTrackDatasourceOtherConfigurator(json.genomeID)]) {
+                encodeModalTables[i++].setDatasource(new EncodeTrackDatasource(config))
             }
 
             buttonConfigurations.push(json);
@@ -224,11 +249,11 @@ const updateTrackMenus = async (genomeID, GtexUtils, encodeIsSupported, encodeMo
 
     if (encodeIsSupported) {
 
-        createDropdownButton($divider, 'ENCODE Other',   id_prefix)
-            .on('click', () => encodeModalTables[ 1 ].$modal.modal('show'));
+        createDropdownButton($divider, 'ENCODE Other', id_prefix)
+            .on('click', () => encodeModalTables[1].$modal.modal('show'));
 
         createDropdownButton($divider, 'ENCODE Signals', id_prefix)
-            .on('click', () => encodeModalTables[ 0 ].$modal.modal('show'));
+            .on('click', () => encodeModalTables[0].$modal.modal('show'));
 
     }
 
@@ -245,23 +270,23 @@ const updateTrackMenus = async (genomeID, GtexUtils, encodeIsSupported, encodeMo
 
 };
 
-const createDropdownButton = ($divider, buttonText, id_prefix) => {
-    const $button = $('<button>', { class: 'dropdown-item', type: 'button' })
-    $button.text(`${ buttonText } ...`)
-    $button.attr('id', `${ id_prefix }${ buttonText.toLowerCase().split(' ').join('_') }`)
+function createDropdownButton($divider, buttonText, id_prefix) {
+    const $button = $('<button>', {class: 'dropdown-item', type: 'button'})
+    $button.text(`${buttonText} ...`)
+    $button.attr('id', `${id_prefix}${buttonText.toLowerCase().split(' ').join('_')}`)
     $button.insertAfter($divider)
     return $button
 }
 
-const configureSelectModal = ($genericSelectModal, buttonConfiguration) => {
+function configureSelectModal($genericSelectModal, buttonConfiguration) {
 
-    let markup = `<div>${ buttonConfiguration.label }</div>`
+    let markup = `<div>${buttonConfiguration.label}</div>`
 
     // if (buttonConfiguration.description) {
     //     markup += `<div>${ buttonConfiguration.description }</div>`
     // }
 
-    $genericSelectModal.find('.modal-title').text(`${ buttonConfiguration.label }`);
+    $genericSelectModal.find('.modal-title').text(`${buttonConfiguration.label}`);
 
     let $select = $genericSelectModal.find('select');
     $select.empty()
@@ -284,7 +309,7 @@ const configureSelectModal = ($genericSelectModal, buttonConfiguration) => {
 
 }
 
-const getPathsWithTrackRegistryFile = async (genomeID, trackRegistryFile) => {
+async function getPathsWithTrackRegistryFile(genomeID, trackRegistryFile) {
 
     let response = undefined;
     try {
@@ -302,8 +327,8 @@ const getPathsWithTrackRegistryFile = async (genomeID, trackRegistryFile) => {
         throw e;
     }
 
-    return trackRegistry[ genomeID ]
+    return trackRegistry[genomeID]
 
 }
 
-export { createTrackWidgets, createTrackWidgetsWithTrackRegistry }
+export {createTrackWidgets, createTrackWidgetsWithTrackRegistry}

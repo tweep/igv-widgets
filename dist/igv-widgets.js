@@ -5780,10 +5780,21 @@ if (typeof process === 'object' && typeof window === 'undefined') {
     };
 }
 
+// Convenience functions for the gapi oAuth library.
+
 const FIVE_MINUTES = 5 * 60 * 1000;
 
+let apiKey;
 
 async function getAccessToken(scope) {
+
+    if(typeof gapi === "undefined") {
+        throw Error("Google authentication requires the 'gapi' library")
+    }
+    if(!gapi.auth2) {
+        throw Error("Google 'auth2' has not been initialized")
+    }
+
 
     let currentUser = gapi.auth2.getAuthInstance().currentUser.get();
     if (currentUser.isSignedIn()) {
@@ -5791,7 +5802,7 @@ async function getAccessToken(scope) {
             await currentUser.grant({scope});
         }
         const {access_token, expires_at} = currentUser.getAuthResponse();
-        if (Date.now()  < (expires_at - FIVE_MINUTES)) {
+        if (Date.now() < (expires_at - FIVE_MINUTES)) {
             return {access_token, expires_at};
         } else {
             const {access_token, expires_at} = currentUser.reloadAuthResponse();
@@ -5812,6 +5823,80 @@ async function signIn(scope) {
     return gapi.auth2.getAuthInstance().signIn(options)
 }
 
+function getApiKey() {
+    return apiKey;
+}
+
+function isGoogleDriveURL(url) {
+    return url.indexOf("drive.google.com") >= 0 || url.indexOf("www.googleapis.com/drive") > 0
+}
+
+function driveDownloadURL(link) {
+    // Return a google drive download url for the sharable link
+    //https://drive.google.com/open?id=0B-lleX9c2pZFbDJ4VVRxakJzVGM
+    //https://drive.google.com/file/d/1_FC4kCeO8E3V4dJ1yIW7A0sn1yURKIX-/view?usp=sharing
+    var id = getGoogleDriveFileID(link);
+    return id ? "https://www.googleapis.com/drive/v3/files/" + id + "?alt=media&supportsTeamDrives=true" : link;
+}
+
+
+// getDriveFileInfo: function (googleDriveURL) {
+//     const id = getGoogleDriveFileID(googleDriveURL);
+//     const endPoint = "https://www.googleapis.com/drive/v3/files/" + id + "?supportsTeamDrives=true";
+//     return igvxhr.loadJson(endPoint, buildOptions({}));
+// }
+
+
+function getGoogleDriveFileID(link) {
+
+    //https://drive.google.com/file/d/1_FC4kCeO8E3V4dJ1yIW7A0sn1yURKIX-/view?usp=sharing
+    var i1, i2;
+
+    if (link.includes("/open?id=")) {
+        i1 = link.indexOf("/open?id=") + 9;
+        i2 = link.indexOf("&");
+        if (i1 > 0 && i2 > i1) {
+            return link.substring(i1, i2)
+        } else if (i1 > 0) {
+            return link.substring(i1);
+        }
+
+    } else if (link.includes("/file/d/")) {
+        i1 = link.indexOf("/file/d/") + 8;
+        i2 = link.lastIndexOf("/");
+        return link.substring(i1, i2);
+    }
+}
+
+async function getDriveFileInfo(googleDriveURL) {
+
+    const id = getGoogleDriveFileID(googleDriveURL);
+    const apiKey = getApiKey();
+    //const accessToken = getAccessToken("https://www.googleapis.com/auth/drive.readonly");
+    //if(accessToken) {
+    const endPoint = "https://www.googleapis.com/drive/v3/files/" + id + "?supportsTeamDrives=true&key=" + apiKey;
+    const response = await fetch(endPoint);
+    let json = await response.json();
+    if (json.error && json.error.code === 404) {
+        const {access_token} = await getAccessToken("https://www.googleapis.com/auth/drive.readonly");
+        if (access_token) {
+            const response = await fetch(endPoint, {
+                headers: {
+                    'Authorization': `Bearer ${access_token}`
+                }
+            });
+            json = await response.json();
+            if(json.error) {
+                throw Error(json.error);
+            }
+        } else {
+            throw Error(json.error);
+        }
+    }
+    return json;
+    // }
+}
+
 /*
  *  Author: Jim Robinson, 2020
  *
@@ -5820,28 +5905,32 @@ async function signIn(scope) {
  * PREQUISITES
  *    gapi loaded
  *    oauth2 loaded and initialized
+ *
+ * This wrapper is stateless -- this is important as multiple copies of igv-utils might be present
+ * in an application.  All state is held in the gapi library itself.
  */
-
-let pickerAPILoaded = false;
 
 async function init() {
     return new Promise(function (resolve, reject) {
         gapi.load("picker", {
-            callback: function(result) {
-                pickerAPILoaded = true;
-                resolve(result);
-            },
-            onerror: reject});
+            callback: resolve,
+            onerror: reject
+        });
     })
 }
 
 async function createDropdownButtonPicker(multipleFileSelection, filePickerHandler) {
 
-    if(!pickerAPILoaded) {
+
+    if(typeof gapi === "undefined") {
+        throw Error("Google authentication requires the 'gapi' library")
+    }
+
+    if(typeof google === "undefined" || !google.picker) {
         await init();
     }
 
-    const {access_token} = await getAccessToken('https://www.googleapis.com/auth/drive.readonly');
+    const {access_token} = await getAccessToken('https://www.googleapis.com/auth/drive.file');
     if (access_token) {
 
         const view = new google.picker.DocsView(google.picker.ViewId.DOCS);
@@ -7635,8 +7724,8 @@ function indexLookup  (dataSuffix)  {
     }
 
 }
-function isGoogleDriveComprehensive  (path, google)  {
-    return !(path instanceof File) && !(path.google_url) && google.isGoogleDrive(path)
+function isGoogleDriveComprehensive  (path)  {
+    return !(path instanceof File) && !(path.google_url) && isGoogleDriveURL(path)
 }
 
 // TODO: This replaces the above "indexLookup"
@@ -7727,10 +7816,9 @@ var utils = /*#__PURE__*/Object.freeze({
 
 class FileLoad {
 
-    constructor({ localFileInput, dropboxButton, googleEnabled, googleDriveButton, igvxhr, google }) {
+    constructor({ localFileInput, dropboxButton, googleEnabled, googleDriveButton, igvxhr }) {
 
         this.igvxhr = igvxhr;
-        this.google = google;
 
         localFileInput.addEventListener('change', async () => {
 
@@ -7772,7 +7860,7 @@ class FileLoad {
                             return {
                                 filename: name,
                                 name,
-                                google_url: google.driveDownloadURL(url)
+                                google_url: driveDownloadURL(url)
                             };
                         });
 
@@ -7886,9 +7974,9 @@ const indexSet = new Set(['fai']);
 const errorString = 'ERROR: Select both a sequence file (.fa or .fasta) and an index file (.fai).';
 class GenomeFileLoad extends FileLoad {
 
-    constructor({ localFileInput, dropboxButton, googleEnabled, googleDriveButton, loadHandler, igvxhr, google }) {
+    constructor({ localFileInput, dropboxButton, googleEnabled, googleDriveButton, loadHandler, igvxhr }) {
         super(
-            { localFileInput, dropboxButton, googleEnabled, googleDriveButton, igvxhr, google });
+            { localFileInput, dropboxButton, googleEnabled, googleDriveButton, igvxhr });
         this.loadHandler = loadHandler;
     }
 
@@ -7972,8 +8060,8 @@ class GenomeFileLoad extends FileLoad {
 
 class SessionFileLoad extends FileLoad {
 
-    constructor({ localFileInput, dropboxButton, googleEnabled, googleDriveButton, loadHandler, igvxhr, google }) {
-        super({ localFileInput, dropboxButton, googleEnabled, googleDriveButton, igvxhr, google });
+    constructor({ localFileInput, dropboxButton, googleEnabled, googleDriveButton, loadHandler, igvxhr }) {
+        super({ localFileInput, dropboxButton, googleEnabled, googleDriveButton, igvxhr });
         this.loadHandler = loadHandler;
     }
 
@@ -8118,8 +8206,8 @@ function configureSaveSessionModal(prefix, JSONProvider, sessionSaveModal) {
 const indexableFormats = new Set(["vcf", "bed", "gff", "gtf", "gff3", "bedgraph"]);
 
 class TrackFileLoad extends FileLoad {
-    constructor({ localFileInput, dropboxButton, googleEnabled, googleDriveButton, loadHandler, igvxhr, google }) {
-        super({ localFileInput, dropboxButton, googleEnabled, googleDriveButton, igvxhr, google });
+    constructor({ localFileInput, dropboxButton, googleEnabled, googleDriveButton, loadHandler, igvxhr }) {
+        super({ localFileInput, dropboxButton, googleEnabled, googleDriveButton, igvxhr });
         this.loadHandler = loadHandler;
     }
 
@@ -8376,23 +8464,22 @@ class TrackFileLoad extends FileLoad {
 
 class MultipleTrackFileLoad {
 
-    constructor ({ $localFileInput, $dropboxButton, $googleDriveButton, fileLoadHandler, multipleFileSelection, igvxhr, google }) {
+    constructor({$localFileInput, $dropboxButton, $googleDriveButton, fileLoadHandler, multipleFileSelection, igvxhr}) {
 
         this.fileLoadHandler = fileLoadHandler;
         this.igvxhr = igvxhr;
-        this.google = google;
 
         $localFileInput.on('change', async () => {
 
             if (true === MultipleTrackFileLoad.isValidLocalFileInput($localFileInput)) {
 
                 const input = $localFileInput.get(0);
-                const { files } = input;
+                const {files} = input;
                 const paths = Array.from(files);
 
                 input.value = '';
 
-                await ingestPaths( { paths, fileLoadHandler, google, igvxhr } );
+                await ingestPaths({paths, fileLoadHandler, igvxhr});
             }
 
         });
@@ -8401,14 +8488,19 @@ class MultipleTrackFileLoad {
 
             const obj =
                 {
-                    success: dbFiles => ingestPaths( { paths: dbFiles.map(({ link }) => link), fileLoadHandler, google, igvxhr } ),
-                    cancel: () => {},
+                    success: dbFiles => ingestPaths({
+                        paths: dbFiles.map(({link}) => link),
+                        fileLoadHandler,
+                        igvxhr
+                    }),
+                    cancel: () => {
+                    },
                     linkType: "preview",
                     multiselect: multipleFileSelection,
                     folderselect: false,
                 };
 
-            Dropbox.choose( obj );
+            Dropbox.choose(obj);
         });
 
         if ($googleDriveButton) {
@@ -8417,11 +8509,11 @@ class MultipleTrackFileLoad {
 
                 createDropdownButtonPicker(multipleFileSelection, async responses => {
 
-                    const paths = responses.map(({ name, url }) => {
+                    const paths = responses.map(({name, url}) => {
 
                         return {
-                            url: google.driveDownloadURL(url),
-                            google_url: google.driveDownloadURL(url),
+                            url: driveDownloadURL(url),
+                            google_url: driveDownloadURL(url),
                             name,
                             filename: name,
                             format: inferFileFormat(name)
@@ -8429,7 +8521,7 @@ class MultipleTrackFileLoad {
 
                     });
 
-                    await ingestPaths({ paths, fileLoadHandler, google, igvxhr });
+                    await ingestPaths({paths, fileLoadHandler, igvxhr});
                 });
 
             });
@@ -8439,7 +8531,7 @@ class MultipleTrackFileLoad {
     }
 
     async loadPaths(paths) {
-        await ingestPaths({ paths, fileLoadHandler: this.fileLoadHandler, google: this.google, igvxhr: this.igvxhr });
+        await ingestPaths({paths, fileLoadHandler: this.fileLoadHandler, igvxhr: this.igvxhr});
     }
 
     static isValidLocalFileInput($input) {
@@ -8448,9 +8540,9 @@ class MultipleTrackFileLoad {
 
 }
 
-const ingestPaths = async ({ paths, fileLoadHandler, google, igvxhr }) => {
+async function ingestPaths({paths, fileLoadHandler, igvxhr}) {
 
-    const { jsonConfigurations, remainingPaths } = await getJSONTrackConfigurations(paths, google, igvxhr);
+    const {jsonConfigurations, remainingPaths} = await getJSONTrackConfigurations(paths, igvxhr);
 
     if (remainingPaths) {
 
@@ -8459,32 +8551,32 @@ const ingestPaths = async ({ paths, fileLoadHandler, google, igvxhr }) => {
         for (let path of remainingPaths) {
 
             let name;
-            if (isGoogleDriveComprehensive(path, google)) {
-                const { name:n } = await google.getDriveFileInfo(path);
+            if (isGoogleDriveComprehensive(path)) {
+                const {name: n} = await getDriveFileInfo(path);
                 name = n;
             } else {
                 name = getFilenameComprehensive(path);
             }
 
-            LUT[ name ] = path;
+            LUT[name] = path;
         }
 
         // LUT for data file paths
-        const dataFileLUT = createDataFilePathLUT(LUT, google);
+        const dataFileLUT = createDataFilePathLUT(LUT);
 
         if (Object.keys(dataFileLUT).length > 0) {
 
             // LUT for track configurations
-            const trackConfigurationLUT = createTrackConfigurationLUT(dataFileLUT, google);
+            const trackConfigurationLUT = createTrackConfigurationLUT(dataFileLUT);
 
             // add index file associations to track files
             assessIndexFileAssociations(LUT, trackConfigurationLUT);
 
             // error assessment
-            let { configurations, errorStrings } = validateTrackConfigurations(trackConfigurationLUT);
+            let {configurations, errorStrings} = validateTrackConfigurations(trackConfigurationLUT);
 
             if (configurations) {
-                fileLoadHandler( jsonConfigurations ? jsonConfigurations.concat(configurations) : configurations );
+                fileLoadHandler(jsonConfigurations ? jsonConfigurations.concat(configurations) : configurations);
             }
 
             if (errorStrings) {
@@ -8497,12 +8589,11 @@ const ingestPaths = async ({ paths, fileLoadHandler, google, igvxhr }) => {
         }
 
     } else {
-        fileLoadHandler( jsonConfigurations );
+        fileLoadHandler(jsonConfigurations);
     }
 
-};
-
-const getJSONTrackConfigurations = async (paths, google, igvxhr) => {
+}
+async function getJSONTrackConfigurations  (paths, igvxhr)  {
 
     let remainingPaths = [];
     let jsonPaths = [];
@@ -8518,55 +8609,55 @@ const getJSONTrackConfigurations = async (paths, google, igvxhr) => {
     }
 
     if (0 === jsonPaths.length) {
-        return { jsonConfigurations: undefined, remainingPaths };
+        return {jsonConfigurations: undefined, remainingPaths};
     }
 
-    const promises = jsonPaths.map(path => path.url ? handleGoogleJSON( path.url, igvxhr ) : igvxhr.loadJson( path ));
+    const promises = jsonPaths.map(path => path.url ? handleGoogleJSON(path.url, igvxhr) : igvxhr.loadJson(path));
 
     if (0 === remainingPaths.length) {
         remainingPaths = undefined;
     }
 
-    return { jsonConfigurations: await Promise.all(promises), remainingPaths }
+    return {jsonConfigurations: await Promise.all(promises), remainingPaths}
 
-};
+}
 
 const handleGoogleJSON = async (url, igvxhr) => {
-    const result = await igvxhr.load( url );
+    const result = await igvxhr.load(url);
     return JSON.parse(result);
 };
 
-const createDataFilePathLUT = (LUT, google) => {
+function createDataFilePathLUT (LUT) {
 
     const result = {};
 
-    for (let [ key, path ] of Object.entries(LUT)) {
+    for (let [key, path] of Object.entries(LUT)) {
 
         if (!isValidIndexExtension(key)) {
 
             let format = undefined;
 
             if (path instanceof File) {
-                const { name } = path;
-                format = inferFileFormat( name );
+                const {name} = path;
+                format = inferFileFormat(name);
 
             } else if (path.google_url) {
 
-                const { name, url } = path;
-                if (google.isGoogleDrive(url)) {
-                    format = inferFileFormat( name );
+                const {name, url} = path;
+                if (isGoogleDriveURL(url)) {
+                    format = inferFileFormat(name);
                 }
 
-            } else if (google.isGoogleDrive(path)) {
-                format = inferFileFormat( key );
+            } else if (isGoogleDriveURL(path)) {
+                format = inferFileFormat(key);
             } else {
-                format = inferFileFormat( getFilenameComprehensive(path) );
+                format = inferFileFormat(getFilenameComprehensive(path));
             }
 
             if (undefined !== format) {
-                result[ key ] = path;
+                result[key] = path;
             } else {
-                result[ key ] = { errorString: `Error: Unrecognized file format ${ key }`};
+                result[key] = {errorString: `Error: Unrecognized file format ${key}`};
             }
 
         }
@@ -8574,23 +8665,22 @@ const createDataFilePathLUT = (LUT, google) => {
     }
 
     return result;
-};
-
-const createTrackConfigurationLUT = (dataFileLUT, google) => {
+}
+function createTrackConfigurationLUT (dataFileLUT) {
 
     const result = {};
 
-    for (let [ key, path ] of Object.entries(dataFileLUT)) {
+    for (let [key, path] of Object.entries(dataFileLUT)) {
 
         let config = undefined;
 
         if (path.errorString) {
 
-            config = { errorString: path.errorString };
+            config = {errorString: path.errorString};
 
         } else if (path instanceof File) {
 
-            const { name } = path;
+            const {name} = path;
 
             config =
                 {
@@ -8603,13 +8693,13 @@ const createTrackConfigurationLUT = (dataFileLUT, google) => {
 
         } else if (path.google_url) {
 
-            const { url } = path;
+            const {url} = path;
 
-            if (google.isGoogleDrive(url)) {
+            if (isGoogleDriveURL(url)) {
                 config = path;
             }
 
-        } else if (google.isGoogleDrive(path)) {
+        } else if (isGoogleDriveURL(path)) {
 
             config =
                 {
@@ -8633,36 +8723,35 @@ const createTrackConfigurationLUT = (dataFileLUT, google) => {
 
         }
 
-        result[ key ] = config;
+        result[key] = config;
     }
 
     return result;
-};
-
+}
 const assessIndexFileAssociations = (LUT, trackConfigurationLUT) => {
 
     // identify data file - index file associations
-    for (let [ key, configuration ] of Object.entries(trackConfigurationLUT)) {
+    for (let [key, configuration] of Object.entries(trackConfigurationLUT)) {
 
         if (undefined === configuration.errorString) {
 
             let extension = getExtension(configuration.name);
             const suffix = configuration.name.split('.').pop();
             const isGZippedVCF = ('vcf' === extension && 'gz' === suffix);
-            const { index: indexExtension, isOptional } = knownDataFileIndexFileLookup(extension, isGZippedVCF);
+            const {index: indexExtension, isOptional} = knownDataFileIndexFileLookup(extension, isGZippedVCF);
 
-            const indexKey = `${ key }.${ indexExtension }`;
+            const indexKey = `${key}.${indexExtension}`;
 
             let pieces = key.split('.');
             pieces.pop();
-            let alternativeIndexKey = `${ pieces.join('.') }.${ indexExtension }`;
+            let alternativeIndexKey = `${pieces.join('.')}.${indexExtension}`;
 
-            if (LUT[ indexKey ]) {
-                configuration.indexURL = LUT[ indexKey ].google_url ? LUT[ indexKey ].url : LUT[ indexKey ];
-            } else if (LUT[ alternativeIndexKey ]) {
-                configuration.indexURL = LUT[ indexKey ].google_url ? LUT[ alternativeIndexKey ].url : LUT[ alternativeIndexKey ];
+            if (LUT[indexKey]) {
+                configuration.indexURL = LUT[indexKey].google_url ? LUT[indexKey].url : LUT[indexKey];
+            } else if (LUT[alternativeIndexKey]) {
+                configuration.indexURL = LUT[indexKey].google_url ? LUT[alternativeIndexKey].url : LUT[alternativeIndexKey];
             } else if (false === isOptional) {
-                configuration.errorString = `ERROR: data file ${ key } is missing required index file`;
+                configuration.errorString = `ERROR: data file ${key} is missing required index file`;
             }
 
         }
@@ -8674,17 +8763,17 @@ const assessIndexFileAssociations = (LUT, trackConfigurationLUT) => {
 
 const validateTrackConfigurations = trackConfigurationLUT => {
 
-    let configurations = Object.values(trackConfigurationLUT).filter(({ errorString }) => undefined === errorString);
+    let configurations = Object.values(trackConfigurationLUT).filter(({errorString}) => undefined === errorString);
     if (0 === configurations.length) {
         configurations = undefined;
     }
 
-    let errorStrings = Object.values(trackConfigurationLUT).filter(({ errorString}) => undefined !== errorString).map(({ errorString }) => errorString);
+    let errorStrings = Object.values(trackConfigurationLUT).filter(({errorString}) => undefined !== errorString).map(({errorString}) => errorString);
     if (0 === errorStrings.length) {
         errorStrings = undefined;
     }
 
-    return { configurations, errorStrings }
+    return {configurations, errorStrings}
 };
 
 const getFilenameComprehensive = path => {
@@ -8735,13 +8824,23 @@ const createURLModal = (id, title) => {
 
 let fileLoadWidget;
 
-const createSessionWidgets = ($rootContainer, igvxhr, google, prefix, localFileInputId, dropboxButtonId, googleDriveButtonId, urlModalId, sessionSaveModalId, googleEnabled, loadHandler, JSONProvider) => {
+function createSessionWidgets($rootContainer,
+                              igvxhr,
+                              prefix,
+                              localFileInputId,
+                              dropboxButtonId,
+                              googleDriveButtonId,
+                              urlModalId,
+                              sessionSaveModalId,
+                              googleEnabled,
+                              loadHandler,
+                              JSONProvider) {
 
     const $urlModal = $(createURLModal(urlModalId, 'Session URL'));
     $rootContainer.append($urlModal);
 
     if (!googleEnabled) {
-        $(`#${ googleDriveButtonId }`).parent().hide();
+        $(`#${googleDriveButtonId}`).parent().hide();
     }
 
     const fileLoadWidgetConfig =
@@ -8759,13 +8858,12 @@ const createSessionWidgets = ($rootContainer, igvxhr, google, prefix, localFileI
 
     const sessionFileLoadConfig =
         {
-            localFileInput: document.querySelector(`#${ localFileInputId }`),
-            dropboxButton: document.querySelector(`#${ dropboxButtonId }`),
+            localFileInput: document.querySelector(`#${localFileInputId}`),
+            dropboxButton: document.querySelector(`#${dropboxButtonId}`),
             googleEnabled,
-            googleDriveButton: document.querySelector(`#${ googleDriveButtonId }`),
+            googleDriveButton: document.querySelector(`#${googleDriveButtonId}`),
             loadHandler,
-            igvxhr,
-            google
+            igvxhr
         };
 
     const sessionFileLoad = new SessionFileLoad(sessionFileLoadConfig);
@@ -8777,12 +8875,12 @@ const createSessionWidgets = ($rootContainer, igvxhr, google, prefix, localFileI
 
     configureSaveSessionModal$1($rootContainer, prefix, JSONProvider, sessionSaveModalId);
 
-};
+}
 
 function configureSaveSessionModal$1($rootContainer, prefix, JSONProvider, sessionSaveModalId) {
 
     const modal =
-        `<div id="${ sessionSaveModalId }" class="modal fade igv-app-file-save-modal">
+        `<div id="${sessionSaveModalId}" class="modal fade igv-app-file-save-modal">
 
             <div class="modal-dialog modal-lg">
     
@@ -8853,7 +8951,7 @@ function configureSaveSessionModal$1($rootContainer, prefix, JSONProvider, sessi
     $ok.on('click', okHandler);
 
     $modal.on('show.bs.modal', (e) => {
-        $input.val(`${ prefix }-session.json`);
+        $input.val(`${prefix}-session.json`);
     });
 
     $input.on('keyup', e => {
@@ -9493,9 +9591,9 @@ const encodeTrackDatasourceOtherConfigurator = genomeId => {
 
 };
 
-const createGenericSelectModal = (id, select_id) => {
+function createGenericSelectModal(id, select_id) {
 
-    return `<div id="${ id }" class="modal">
+    return `<div id="${id}" class="modal">
 
                 <div class="modal-dialog modal-lg">
     
@@ -9510,7 +9608,7 @@ const createGenericSelectModal = (id, select_id) => {
             
                         <div class="modal-body">
                             <div class="form-group">
-                                <select id="${ select_id }" class="form-control" multiple></select>
+                                <select id="${select_id}" class="form-control" multiple></select>
                             </div>
                             <div id="igv-widgets-generic-select-modal-footnotes"></div>
                         </div>
@@ -9526,7 +9624,7 @@ const createGenericSelectModal = (id, select_id) => {
 
             </div>`;
 
-};
+}
 
 const createTrackURLModal = id => {
 
@@ -9567,7 +9665,16 @@ let fileLoadWidget$1;
 let multipleTrackFileLoad;
 let encodeModalTables = [];
 let genomeChangeListener;
-const createTrackWidgets = ($igvMain, $localFileInput, $dropboxButton, googleEnabled, $googleDriveButton, encodeTrackModalIds, urlModalId, igvxhr, google, trackLoadHandler) => {
+
+function createTrackWidgets($igvMain,
+                            $localFileInput,
+                            $dropboxButton,
+                            googleEnabled,
+                            $googleDriveButton,
+                            encodeTrackModalIds,
+                            urlModalId,
+                            igvxhr,
+                            trackLoadHandler) {
 
     const $urlModal = $(createTrackURLModal(urlModalId));
     $igvMain.append($urlModal);
@@ -9587,7 +9694,7 @@ const createTrackWidgets = ($igvMain, $localFileInput, $dropboxButton, googleEna
 
     configureModal(fileLoadWidget$1, $urlModal.get(0), async fileLoadWidget => {
         const paths = fileLoadWidget.retrievePaths();
-        await multipleTrackFileLoad.loadPaths( paths );
+        await multipleTrackFileLoad.loadPaths(paths);
         return true;
     });
 
@@ -9602,8 +9709,7 @@ const createTrackWidgets = ($igvMain, $localFileInput, $dropboxButton, googleEna
             $googleDriveButton: googleEnabled ? $googleDriveButton : undefined,
             fileLoadHandler: trackLoadHandler,
             multipleFileSelection: true,
-            igvxhr,
-            google
+            igvxhr
         };
 
     multipleTrackFileLoad = new MultipleTrackFileLoad(multipleTrackFileLoadConfig);
@@ -9619,28 +9725,40 @@ const createTrackWidgets = ($igvMain, $localFileInput, $dropboxButton, googleEna
                 selectHandler: trackLoadHandler
             };
 
-        encodeModalTables.push( new ModalTable(encodeModalTableConfig) );
+        encodeModalTables.push(new ModalTable(encodeModalTableConfig));
 
     }
 
     genomeChangeListener = {
 
-        receiveEvent: async ({ data }) => {
-            const { genomeID } = data;
-            encodeModalTables[ 0 ].setDatasource(new EncodeTrackDatasource(encodeTrackDatasourceSignalConfigurator(genomeID)));
-            encodeModalTables[ 1 ].setDatasource(new EncodeTrackDatasource(encodeTrackDatasourceOtherConfigurator(genomeID)));
+        receiveEvent: async ({data}) => {
+            const {genomeID} = data;
+            encodeModalTables[0].setDatasource(new EncodeTrackDatasource(encodeTrackDatasourceSignalConfigurator(genomeID)));
+            encodeModalTables[1].setDatasource(new EncodeTrackDatasource(encodeTrackDatasourceOtherConfigurator(genomeID)));
         }
     };
 
     EventBus.globalBus.subscribe('DidChangeGenome', genomeChangeListener);
 
-};
+}
 
-const createTrackWidgetsWithTrackRegistry = ($igvMain, $dropdownMenu, $localFileInput, $dropboxButton, googleEnabled, $googleDriveButton, encodeTrackModalIds, urlModalId, selectModalId, igvxhr, google, GtexUtils, trackRegistryFile, trackLoadHandler) => {
+function createTrackWidgetsWithTrackRegistry($igvMain,
+                                             $dropdownMenu,
+                                             $localFileInput,
+                                             $dropboxButton,
+                                             googleEnabled,
+                                             $googleDriveButton,
+                                             encodeTrackModalIds,
+                                             urlModalId,
+                                             selectModalId,
+                                             igvxhr,
+                                             GtexUtils,
+                                             trackRegistryFile,
+                                             trackLoadHandler) {
 
-    createTrackWidgets($igvMain, $localFileInput, $dropboxButton, googleEnabled, $googleDriveButton, encodeTrackModalIds, urlModalId, igvxhr, google, trackLoadHandler);
+    createTrackWidgets($igvMain, $localFileInput, $dropboxButton, googleEnabled, $googleDriveButton, encodeTrackModalIds, urlModalId, igvxhr, trackLoadHandler);
 
-    const $genericSelectModal = $(createGenericSelectModal(selectModalId, `${ selectModalId }-select`));
+    const $genericSelectModal = $(createGenericSelectModal(selectModalId, `${selectModalId}-select`));
     $igvMain.append($genericSelectModal);
 
     const $select = $genericSelectModal.find('select');
@@ -9654,9 +9772,9 @@ const createTrackWidgetsWithTrackRegistry = ($igvMain, $dropdownMenu, $localFile
 
         const configurations = [];
         const $selectedOptions = $select.find('option:selected');
-        $selectedOptions.each(function() {
-            console.log(`You selected ${ $(this).val() }`);
-            configurations.push( $(this).data('track') );
+        $selectedOptions.each(function () {
+            console.log(`You selected ${$(this).val()}`);
+            configurations.push($(this).data('track'));
             $(this).removeAttr('selected');
         });
 
@@ -9678,16 +9796,16 @@ const createTrackWidgetsWithTrackRegistry = ($igvMain, $dropdownMenu, $localFile
 
     genomeChangeListener = {
 
-        receiveEvent: async ({ data }) => {
-            const { genomeID } = data;
+        receiveEvent: async ({data}) => {
+            const {genomeID} = data;
 
             const encodeIsSupported = EncodeTrackDatasource.supportsGenome(genomeID);
             if (encodeIsSupported) {
-                console.log(`ENCODE supports genome ${ genomeID }`);
-                encodeModalTables[ 0 ].setDatasource(new EncodeTrackDatasource(encodeTrackDatasourceSignalConfigurator(genomeID)));
-                encodeModalTables[ 1 ].setDatasource(new EncodeTrackDatasource(encodeTrackDatasourceOtherConfigurator(genomeID)));
+                console.log(`ENCODE supports genome ${genomeID}`);
+                encodeModalTables[0].setDatasource(new EncodeTrackDatasource(encodeTrackDatasourceSignalConfigurator(genomeID)));
+                encodeModalTables[1].setDatasource(new EncodeTrackDatasource(encodeTrackDatasourceOtherConfigurator(genomeID)));
             } else {
-                console.log(`ENCODE DOES NOT support genome ${ genomeID }`);
+                console.log(`ENCODE DOES NOT support genome ${genomeID}`);
             }
 
             await updateTrackMenus(genomeID, GtexUtils, encodeIsSupported, encodeModalTables, trackRegistryFile, $dropdownMenu, $genericSelectModal);
@@ -9696,9 +9814,15 @@ const createTrackWidgetsWithTrackRegistry = ($igvMain, $dropdownMenu, $localFile
 
     EventBus.globalBus.subscribe('DidChangeGenome', genomeChangeListener);
 
-};
+}
 
-const updateTrackMenus = async (genomeID, GtexUtils, encodeIsSupported, encodeModalTables, trackRegistryFile, $dropdownMenu, $genericSelectModal) => {
+async function updateTrackMenus(genomeID,
+                                GtexUtils,
+                                encodeIsSupported,
+                                encodeModalTables,
+                                trackRegistryFile,
+                                $dropdownMenu,
+                                $genericSelectModal) {
 
     const id_prefix = 'genome_specific_';
 
@@ -9711,20 +9835,20 @@ const updateTrackMenus = async (genomeID, GtexUtils, encodeIsSupported, encodeMo
     const paths = await getPathsWithTrackRegistryFile(genomeID, trackRegistryFile);
 
     if (undefined === paths) {
-        console.warn(`There are no tracks in the track registryy for genome ${ genomeID }`);
+        console.warn(`There are no tracks in the track registryy for genome ${genomeID}`);
         return;
     }
 
     let responses = [];
     try {
-        responses = await Promise.all( paths.map( path => fetch(path) ) );
+        responses = await Promise.all(paths.map(path => fetch(path)));
     } catch (e) {
         AlertSingleton$1.present(e.message);
     }
 
     let jsons = [];
     try {
-        jsons = await Promise.all( responses.map( response => response.json() ) );
+        jsons = await Promise.all(responses.map(response => response.json()));
     } catch (e) {
         AlertSingleton$1.present(e.message);
     }
@@ -9736,8 +9860,8 @@ const updateTrackMenus = async (genomeID, GtexUtils, encodeIsSupported, encodeMo
         if ('ENCODE' === json.type) {
 
             let i = 0;
-            for (let config of [ encodeTrackDatasourceSignalConfigurator(genomeID), encodeTrackDatasourceOtherConfigurator(json.genomeID) ]) {
-                encodeModalTables[ i++ ].setDatasource( new EncodeTrackDatasource(config) );
+            for (let config of [encodeTrackDatasourceSignalConfigurator(genomeID), encodeTrackDatasourceOtherConfigurator(json.genomeID)]) {
+                encodeModalTables[i++].setDatasource(new EncodeTrackDatasource(config));
             }
 
             buttonConfigurations.push(json);
@@ -9769,11 +9893,11 @@ const updateTrackMenus = async (genomeID, GtexUtils, encodeIsSupported, encodeMo
 
     if (encodeIsSupported) {
 
-        createDropdownButton($divider, 'ENCODE Other',   id_prefix)
-            .on('click', () => encodeModalTables[ 1 ].$modal.modal('show'));
+        createDropdownButton($divider, 'ENCODE Other', id_prefix)
+            .on('click', () => encodeModalTables[1].$modal.modal('show'));
 
         createDropdownButton($divider, 'ENCODE Signals', id_prefix)
-            .on('click', () => encodeModalTables[ 0 ].$modal.modal('show'));
+            .on('click', () => encodeModalTables[0].$modal.modal('show'));
 
     }
 
@@ -9788,25 +9912,24 @@ const updateTrackMenus = async (genomeID, GtexUtils, encodeIsSupported, encodeMo
 
     }
 
-};
-
-const createDropdownButton = ($divider, buttonText, id_prefix) => {
-    const $button = $('<button>', { class: 'dropdown-item', type: 'button' });
-    $button.text(`${ buttonText } ...`);
-    $button.attr('id', `${ id_prefix }${ buttonText.toLowerCase().split(' ').join('_') }`);
+}
+function createDropdownButton($divider, buttonText, id_prefix) {
+    const $button = $('<button>', {class: 'dropdown-item', type: 'button'});
+    $button.text(`${buttonText} ...`);
+    $button.attr('id', `${id_prefix}${buttonText.toLowerCase().split(' ').join('_')}`);
     $button.insertAfter($divider);
     return $button
-};
+}
 
-const configureSelectModal = ($genericSelectModal, buttonConfiguration) => {
+function configureSelectModal($genericSelectModal, buttonConfiguration) {
 
-    let markup = `<div>${ buttonConfiguration.label }</div>`;
+    let markup = `<div>${buttonConfiguration.label}</div>`;
 
     // if (buttonConfiguration.description) {
     //     markup += `<div>${ buttonConfiguration.description }</div>`
     // }
 
-    $genericSelectModal.find('.modal-title').text(`${ buttonConfiguration.label }`);
+    $genericSelectModal.find('.modal-title').text(`${buttonConfiguration.label}`);
 
     let $select = $genericSelectModal.find('select');
     $select.empty();
@@ -9827,9 +9950,9 @@ const configureSelectModal = ($genericSelectModal, buttonConfiguration) => {
         $genericSelectModal.find('#igv-widgets-generic-select-modal-footnotes').html(buttonConfiguration.description);
     }
 
-};
+}
 
-const getPathsWithTrackRegistryFile = async (genomeID, trackRegistryFile) => {
+async function getPathsWithTrackRegistryFile(genomeID, trackRegistryFile) {
 
     let response = undefined;
     try {
@@ -9847,9 +9970,9 @@ const getPathsWithTrackRegistryFile = async (genomeID, trackRegistryFile) => {
         throw e;
     }
 
-    return trackRegistry[ genomeID ]
+    return trackRegistry[genomeID]
 
-};
+}
 
 const dropboxButtonImageLiteral =
     `<svg width="75px" height="64px" viewBox="0 0 75 64" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">

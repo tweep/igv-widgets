@@ -10,9 +10,9 @@ const indexSet = new Set(['fai']);
 const errorString = 'ERROR: Select both a sequence file (.fa or .fasta) and an index file (.fai).';
 class GenomeFileLoad extends FileLoad {
 
-    constructor({ localFileInput, dropboxButton, googleEnabled, googleDriveButton, loadHandler, igvxhr, google }) {
+    constructor({ localFileInput, dropboxButton, googleEnabled, googleDriveButton, loadHandler, igvxhr }) {
         super(
-            { localFileInput, dropboxButton, googleEnabled, googleDriveButton, igvxhr, google });
+            { localFileInput, dropboxButton, googleEnabled, googleDriveButton, igvxhr });
         this.loadHandler = loadHandler;
     }
 

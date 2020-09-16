@@ -1,13 +1,11 @@
-import { DOMUtils } from '../node_modules/igv-utils/src/index.js'
+import { DOMUtils , GoogleUtils, GooglePicker} from '../node_modules/igv-utils/src/index.js'
 import * as Utils from './utils.js'
-import {GooglePicker} from '../node_modules/igv-utils/src/index.js'
 
 class FileLoad {
 
-    constructor({ localFileInput, dropboxButton, googleEnabled, googleDriveButton, igvxhr, google }) {
+    constructor({ localFileInput, dropboxButton, googleEnabled, googleDriveButton, igvxhr }) {
 
         this.igvxhr = igvxhr;
-        this.google = google;
 
         localFileInput.addEventListener('change', async () => {
 
@@ -49,7 +47,7 @@ class FileLoad {
                             return {
                                 filename: name,
                                 name,
-                                google_url: google.driveDownloadURL(url)
+                                google_url: GoogleUtils.driveDownloadURL(url)
                             };
                         });
 
@@ -63,7 +61,7 @@ class FileLoad {
     }
 
     async loadPaths(paths) {
-        console.log('FileLoad: loadPaths(...)');
+        //console.log('FileLoad: loadPaths(...)');
     }
 
     static isValidLocalFileInput(input) {

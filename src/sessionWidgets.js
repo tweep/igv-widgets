@@ -1,19 +1,29 @@
-import { FileUtils } from '../node_modules/igv-utils/src/index.js'
+import {FileUtils} from '../node_modules/igv-utils/src/index.js'
 import FileLoadManager from './fileLoadManager.js'
 import FileLoadWidget from './fileLoadWidget.js'
 import SessionFileLoad from "./sessionFileLoad.js"
-import { createURLModal } from './urlModal.js'
+import {createURLModal} from './urlModal.js'
 import * as Utils from './utils.js'
 
 let fileLoadWidget;
 
-const createSessionWidgets = ($rootContainer, igvxhr, google, prefix, localFileInputId, dropboxButtonId, googleDriveButtonId, urlModalId, sessionSaveModalId, googleEnabled, loadHandler, JSONProvider) => {
+function createSessionWidgets($rootContainer,
+                              igvxhr,
+                              prefix,
+                              localFileInputId,
+                              dropboxButtonId,
+                              googleDriveButtonId,
+                              urlModalId,
+                              sessionSaveModalId,
+                              googleEnabled,
+                              loadHandler,
+                              JSONProvider) {
 
     const $urlModal = $(createURLModal(urlModalId, 'Session URL'))
     $rootContainer.append($urlModal);
 
     if (!googleEnabled) {
-        $(`#${ googleDriveButtonId }`).parent().hide();
+        $(`#${googleDriveButtonId}`).parent().hide();
     }
 
     const fileLoadWidgetConfig =
@@ -31,13 +41,12 @@ const createSessionWidgets = ($rootContainer, igvxhr, google, prefix, localFileI
 
     const sessionFileLoadConfig =
         {
-            localFileInput: document.querySelector(`#${ localFileInputId }`),
-            dropboxButton: document.querySelector(`#${ dropboxButtonId }`),
+            localFileInput: document.querySelector(`#${localFileInputId}`),
+            dropboxButton: document.querySelector(`#${dropboxButtonId}`),
             googleEnabled,
-            googleDriveButton: document.querySelector(`#${ googleDriveButtonId }`),
+            googleDriveButton: document.querySelector(`#${googleDriveButtonId}`),
             loadHandler,
-            igvxhr,
-            google
+            igvxhr
         };
 
     const sessionFileLoad = new SessionFileLoad(sessionFileLoadConfig)
@@ -54,7 +63,7 @@ const createSessionWidgets = ($rootContainer, igvxhr, google, prefix, localFileI
 function configureSaveSessionModal($rootContainer, prefix, JSONProvider, sessionSaveModalId) {
 
     const modal =
-        `<div id="${ sessionSaveModalId }" class="modal fade igv-app-file-save-modal">
+        `<div id="${sessionSaveModalId}" class="modal fade igv-app-file-save-modal">
 
             <div class="modal-dialog modal-lg">
     
@@ -125,7 +134,7 @@ function configureSaveSessionModal($rootContainer, prefix, JSONProvider, session
     $ok.on('click', okHandler);
 
     $modal.on('show.bs.modal', (e) => {
-        $input.val(`${ prefix }-session.json`);
+        $input.val(`${prefix}-session.json`);
     });
 
     $input.on('keyup', e => {
@@ -138,4 +147,4 @@ function configureSaveSessionModal($rootContainer, prefix, JSONProvider, session
 
 }
 
-export { createSessionWidgets }
+export {createSessionWidgets}

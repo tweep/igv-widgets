@@ -1,7 +1,6 @@
+function createGenericSelectModal(id, select_id) {
 
-const createGenericSelectModal = (id, select_id) => {
-
-    return `<div id="${ id }" class="modal">
+    return `<div id="${id}" class="modal">
 
                 <div class="modal-dialog modal-lg">
     
@@ -16,7 +15,7 @@ const createGenericSelectModal = (id, select_id) => {
             
                         <div class="modal-body">
                             <div class="form-group">
-                                <select id="${ select_id }" class="form-control" multiple></select>
+                                <select id="${select_id}" class="form-control" multiple></select>
                             </div>
                             <div id="igv-widgets-generic-select-modal-footnotes"></div>
                         </div>
@@ -33,4 +32,4 @@ const createGenericSelectModal = (id, select_id) => {
             </div>`;
 
 };
-export { createGenericSelectModal }
+export {createGenericSelectModal}

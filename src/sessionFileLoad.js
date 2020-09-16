@@ -3,8 +3,8 @@ import {FileUtils} from "../node_modules/igv-utils/src/index.js"
 
 class SessionFileLoad extends FileLoad {
 
-    constructor({ localFileInput, dropboxButton, googleEnabled, googleDriveButton, loadHandler, igvxhr, google }) {
-        super({ localFileInput, dropboxButton, googleEnabled, googleDriveButton, igvxhr, google });
+    constructor({ localFileInput, dropboxButton, googleEnabled, googleDriveButton, loadHandler, igvxhr }) {
+        super({ localFileInput, dropboxButton, googleEnabled, googleDriveButton, igvxhr });
         this.loadHandler = loadHandler;
     }
 

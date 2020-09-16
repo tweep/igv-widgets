@@ -3,8 +3,6 @@ import AlertDialog from './alertDialog.js';
 class AlertSingleton {
     constructor(root) {
 
-        console.log('AlertSingleton instance');
-
         if (root) {
             this.alertDialog = undefined;
         }
